@@ -808,51 +808,57 @@ export default function ProgramDetailPage() {
                                     Content Assets
                                 </h2>
                             </div>
-                            <div className="p-6">
-                                {program.assets && program.assets.length > 0 ? (
-                                    <div className="space-y-3">
-                                        {program.assets.map((asset, index) => {
-                                            const Icon = getAssetIcon(asset.type);
-                                            const isSelected = selectedAsset?._id === asset._id;
+                            <div className="relative">
+                                <div className="p-6 max-h-96 overflow-y-auto">
+                                    {program.assets && program.assets.length > 0 ? (
+                                        <div className="space-y-3">
+                                            {program.assets.map((asset, index) => {
+                                                const Icon = getAssetIcon(asset.type);
+                                                const isSelected = selectedAsset?._id === asset._id;
 
-                                            return (
-                                                <div
-                                                    key={asset._id || `asset-${index}`}
-                                                    onClick={() => setSelectedAsset(asset)}
-                                                    className={`group p-4 rounded-xl cursor-pointer transition-all duration-300 ${isSelected
-                                                        ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 shadow-md'
-                                                        : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent hover:border-gray-200'
-                                                        }`}
-                                                >
-                                                    <div className="flex items-center space-x-4">
-                                                        <div className={`p-3 rounded-lg transition-colors ${isSelected
-                                                            ? 'bg-blue-100 text-blue-600'
-                                                            : 'bg-white text-gray-500 group-hover:bg-gray-200'
-                                                            }`}>
-                                                            <Icon className="h-6 w-6" />
+                                                return (
+                                                    <div
+                                                        key={asset._id || `asset-${index}`}
+                                                        onClick={() => setSelectedAsset(asset)}
+                                                        className={`group p-4 rounded-xl cursor-pointer transition-all duration-300 ${isSelected
+                                                            ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 shadow-md'
+                                                            : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent hover:border-gray-200'
+                                                            }`}
+                                                    >
+                                                        <div className="flex items-center space-x-4">
+                                                            <div className={`p-3 rounded-lg transition-colors ${isSelected
+                                                                ? 'bg-blue-100 text-blue-600'
+                                                                : 'bg-white text-gray-500 group-hover:bg-gray-200'
+                                                                }`}>
+                                                                <Icon className="h-6 w-6" />
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <h3 className={`font-medium truncate ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}>
+                                                                    {asset.title}
+                                                                </h3>
+                                                                <p className="text-sm text-gray-500 mt-1">
+                                                                    {asset.type.charAt(0).toUpperCase() + asset.type.slice(1)}
+                                                                    {asset.fileSize && ` • ${formatFileSize(asset.fileSize)}`}
+                                                                </p>
+                                                            </div>
+                                                            {isSelected && (
+                                                                <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></div>
+                                                            )}
                                                         </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <h3 className={`font-medium truncate ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}>
-                                                                {asset.title}
-                                                            </h3>
-                                                            <p className="text-sm text-gray-500 mt-1">
-                                                                {asset.type.charAt(0).toUpperCase() + asset.type.slice(1)}
-                                                                {asset.fileSize && ` • ${formatFileSize(asset.fileSize)}`}
-                                                            </p>
-                                                        </div>
-                                                        {isSelected && (
-                                                            <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></div>
-                                                        )}
                                                     </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-12">
-                                        <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                                        <p className="text-gray-500 font-medium">No assets added yet</p>
-                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-12">
+                                            <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                                            <p className="text-gray-500 font-medium">No assets added yet</p>
+                                        </div>
+                                    )}
+                                </div>
+                                {/* Scroll indicator gradient */}
+                                {program.assets && program.assets.length > 3 && (
+                                    <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
                                 )}
                             </div>
                         </div>
