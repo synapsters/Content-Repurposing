@@ -192,7 +192,7 @@ export class AIContentGenerator {
         }
     }
 
-    async generateContent(request: ContentGenerationRequest): Promise<any> {
+    async generateContent(request: ContentGenerationRequest): Promise<string | QuizQuestion[] | FlashCard[] | CaseStudy> {
         const { type, sourceContent, language, additionalContext } = request;
 
         // Enhanced content processing for different source types

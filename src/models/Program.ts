@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { QuizQuestion, FlashCard, CaseStudy } from '@/lib/ai-service';
 
 export interface IAsset {
     _id?: string;
@@ -17,7 +18,7 @@ export interface IGeneratedContent {
     _id?: string;
     type: 'summary' | 'quiz' | 'case_study' | 'short_lecture' | 'flashcard';
     title: string;
-    content: any; // Flexible content structure based on type
+    content: string | QuizQuestion[] | FlashCard[] | CaseStudy; // Flexible content structure based on type
     language: string;
     generatedAt: Date;
     isPublished: boolean;
