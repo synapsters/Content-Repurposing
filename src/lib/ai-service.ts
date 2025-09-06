@@ -200,6 +200,7 @@ export class AIContentGenerator {
       
       Requirements:
       - Write a natural, conversational narration script suitable for text-to-speech
+      - DO NOT include markdown headers (##, ###) or formatting symbols
       - Include appropriate pauses marked with [PAUSE]
       - Add emphasis markers like [EMPHASIS] for important points
       - Structure it with clear introduction, main content, and conclusion
@@ -209,8 +210,11 @@ export class AIContentGenerator {
       - Make it engaging and educational
       - Duration should be approximately 3-5 minutes when narrated
       - If this is video content, create narration that complements the visual elements
+      - Use plain text format without any markdown or special formatting
+      - Avoid timestamps like (0:00-0:15) in the main narration text
       
-      Format the response as a clean narration script with timing and tone markers.
+      Format the response as a clean, plain text narration script with only timing and tone markers in brackets.
+      Do not use markdown headers, bold text, or other formatting symbols.
       `;
 
         const result = await this.model.generateContent(prompt);

@@ -29,13 +29,33 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
     // Clean up audio script for better TTS
     const cleanTextForTTS = (rawText: string): string => {
         return rawText
-            // Remove timing markers
+            // Remove markdown headers (##, ###, etc.)
+            .replace(/^#{1,6}\s+.*$/gm, '')
+            // Remove markdown formatting
+            .replace(/\*\*(.*?)\*\*/g, '$1') // Bold **text**
+            .replace(/\*(.*?)\*/g, '$1') // Italic *text*
+            .replace(/`(.*?)`/g, '$1') // Code `text`
+            .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Links [text](url)
+            // Remove timestamp markers like (0:00-0:15)
+            .replace(/\(\d+:\d+[-–]\d+:\d+\)/g, '')
+            // Remove timing markers and tone instructions
             .replace(/\[PAUSE\]/g, '. ')
             .replace(/\[EMPHASIS\]/g, '')
+            .replace(/\[\/EMPHASIS\]/g, '')
             .replace(/\[FRIENDLY TONE\]/g, '')
             .replace(/\[SERIOUS TONE\]/g, '')
-            .replace(/\[.*?\]/g, '') // Remove any other markers
-            // Clean up extra whitespace
+            .replace(/\[ENERGIC TONE\]/g, '')
+            .replace(/\[ENTHUSIASTIC TONE\]/g, '')
+            .replace(/\[EXPLANATORY TONE\]/g, '')
+            .replace(/\[.*?\]/g, '') // Remove any other markers in brackets
+            // Remove section markers like **(0:00-0:15) Introduction - [FRIENDLY TONE]**
+            .replace(/\*\*\([^)]+\)[^*]*\*\*/g, '')
+            // Remove asterisk-based formatting
+            .replace(/\*\([^)]*\)\*/g, '')
+            // Remove extra dashes and formatting
+            .replace(/[-–—]{2,}/g, ' ')
+            // Clean up multiple spaces and line breaks
+            .replace(/\n\s*\n/g, '\n')
             .replace(/\s+/g, ' ')
             .trim();
     };
