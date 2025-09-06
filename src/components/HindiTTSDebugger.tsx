@@ -7,7 +7,14 @@ import { Play, Bug, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 
 export default function HindiTTSDebugger() {
     const [isTestRunning, setIsTestRunning] = useState(false);
-    const [testResults, setTestResults] = useState<any>(null);
+    const [testResults, setTestResults] = useState<{
+        browserSupport: boolean;
+        voicesLoaded: boolean;
+        hindiVoicesFound: Array<{ name: string; lang: string; localService: boolean }>;
+        allVoices: Array<{ name: string; lang: string; localService: boolean }>;
+        testPassed: boolean;
+        errors: string[];
+    } | null>(null);
 
     const runComprehensiveTest = async () => {
         setIsTestRunning(true);
@@ -205,7 +212,7 @@ export default function HindiTTSDebugger() {
                             <div>
                                 <h4 className="font-medium mb-2">Hindi Voices Found:</h4>
                                 <ul className="text-sm space-y-1">
-                                    {testResults.hindiVoicesFound.map((voice: any, index: number) => (
+                                    {testResults.hindiVoicesFound.map((voice, index: number) => (
                                         <li key={index} className="bg-green-50 p-2 rounded">
                                             <strong>{voice.name}</strong> ({voice.lang})
                                             {voice.localService ? ' - Local' : ' - Remote'}
@@ -232,7 +239,7 @@ export default function HindiTTSDebugger() {
                             <summary className="cursor-pointer font-medium">All Available Voices ({testResults.allVoices.length})</summary>
                             <div className="mt-2 max-h-40 overflow-y-auto">
                                 <ul className="text-xs space-y-1">
-                                    {testResults.allVoices.map((voice: any, index: number) => (
+                                    {testResults.allVoices.map((voice, index: number) => (
                                         <li key={index} className="bg-gray-50 p-1 rounded">
                                             {voice.name} ({voice.lang}) {voice.localService ? '🏠' : '☁️'}
                                         </li>

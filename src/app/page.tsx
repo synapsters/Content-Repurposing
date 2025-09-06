@@ -83,7 +83,7 @@ export default function Dashboard() {
       const totalAssets = data.programs?.reduce((acc: number, program: IProgram) =>
         acc + (program.assets?.length || 0), 0) || 0;
       // Helper function to get latest versions only
-      const getLatestVersionsCount = (contents: any[]) => {
+      const getLatestVersionsCount = (contents: IGeneratedContent[]) => {
         const publishedContent = contents.filter(content => content.status === 'published');
         const groupedByTypeAndLang = publishedContent.reduce((acc, content) => {
           const key = `${content.type}-${content.language}`;
@@ -92,7 +92,7 @@ export default function Dashboard() {
           }
           acc[key].push(content);
           return acc;
-        }, {} as Record<string, any[]>);
+        }, {} as Record<string, IGeneratedContent[]>);
 
         return Object.keys(groupedByTypeAndLang).length; // Count unique type-language combinations
       };

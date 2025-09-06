@@ -106,23 +106,23 @@ export default function TestHindiTTSPage() {
                         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                             <h4 className="font-semibold text-yellow-800 mb-2">Common Issues:</h4>
                             <ul className="text-yellow-700 text-sm space-y-1">
-                                <li>• <strong>"interrupted" error:</strong> Voice loading was cancelled - wait and retry</li>
+                                <li>• <strong>&quot;interrupted&quot; error:</strong> Voice loading was cancelled - wait and retry</li>
                                 <li>• No Hindi voices installed on your system</li>
-                                <li>• Browser doesn't support Hindi TTS</li>
+                                <li>• Browser doesn&apos;t support Hindi TTS</li>
                                 <li>• Text encoding issues with Devanagari script</li>
                                 <li>• System TTS service not running</li>
                             </ul>
                         </div>
 
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <h4 className="font-semibold text-blue-800 mb-2">Solutions for "interrupted" Error:</h4>
+                            <h4 className="font-semibold text-blue-800 mb-2">Solutions for &quot;interrupted&quot; Error:</h4>
                             <ul className="text-blue-700 text-sm space-y-1">
                                 <li>• <strong>Wait 2-3 seconds</strong> and try again (voices may still be loading)</li>
                                 <li>• <strong>Refresh the page</strong> and retry the test</li>
                                 <li>• <strong>Install Hindi language pack:</strong> Windows Settings → Language → Add Hindi</li>
                                 <li>• <strong>Try Chrome browser</strong> (usually has better TTS support)</li>
                                 <li>• <strong>Check system TTS:</strong> Test Hindi in system settings first</li>
-                                <li>• <strong>Use shorter text:</strong> Try single words like "नमस्ते"</li>
+                                <li>• <strong>Use shorter text:</strong> Try single words like &quot;नमस्ते&quot;</li>
                             </ul>
                         </div>
                     </CardContent>
