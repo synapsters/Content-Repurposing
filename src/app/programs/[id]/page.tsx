@@ -837,7 +837,7 @@ export default function ProgramDetailPage() {
                                         { type: 'case_study', icon: '📋', label: 'Case Study', gradient: 'from-orange-500 to-orange-600' },
                                         { type: 'short_lecture', icon: '🎓', label: 'Short Lecture', gradient: 'from-teal-500 to-teal-600' },
                                         { type: 'audio_track', icon: '🎵', label: 'Audio Track', gradient: 'from-indigo-500 to-indigo-600' },
-                                        { type: 'video_script', icon: '🎬', label: 'Video Script', gradient: 'from-red-500 to-red-600' }
+                                        // { type: 'video_script', icon: '🎬', label: 'Video Script', gradient: 'from-red-500 to-red-600' }
                                     ].map(({ type, icon, label, gradient }) => {
                                         const existingContent = getLatestVersions(selectedAsset.generatedContent || [], undefined, type);
 
