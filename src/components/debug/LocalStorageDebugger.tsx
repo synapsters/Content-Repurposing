@@ -14,7 +14,7 @@ export default function LocalStorageDebugger() {
         try {
             const data = localStorage.getItem('user');
             setUserData(data);
-            
+
             if (data) {
                 const parsed = JSON.parse(data);
                 setParsedUser(parsed);
@@ -98,18 +98,18 @@ export default function LocalStorageDebugger() {
 
                 {/* Actions */}
                 <div className="flex space-x-2">
-                    <Button 
-                        size="sm" 
-                        variant="outline" 
+                    <Button
+                        size="sm"
+                        variant="outline"
                         onClick={checkUserData}
                         className="text-xs"
                     >
                         <RefreshCw className="h-3 w-3 mr-1" />
                         Refresh
                     </Button>
-                    <Button 
-                        size="sm" 
-                        variant="destructive" 
+                    <Button
+                        size="sm"
+                        variant="destructive"
                         onClick={clearUserData}
                         className="text-xs"
                     >

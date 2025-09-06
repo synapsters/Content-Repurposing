@@ -45,3 +45,4 @@ async function dbConnect() {
 }
 
 export default dbConnect;
+export { dbConnect as connectToDatabase };
