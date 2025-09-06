@@ -37,8 +37,10 @@ export default function ProgramDetailPage() {
     const [program, setProgram] = useState<IProgram | null>(null);
     const [loading, setLoading] = useState(true);
     const [selectedAsset, setSelectedAsset] = useState<IAsset | null>(null);
-    const [activeTab, setActiveTab] = useState<'assets' | 'generated'>('assets');
+    const [activeTab, setActiveTab] = useState<string>('summary');
     const [expandedContent, setExpandedContent] = useState<Set<string>>(new Set());
+    const [selectedLanguage, setSelectedLanguage] = useState<string>('en');
+    const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
 
     useEffect(() => {
         if (params.id) {
@@ -59,6 +61,11 @@ export default function ProgramDetailPage() {
             if (data.assets && data.assets.length > 0) {
                 setSelectedAsset(data.assets[0]);
             }
+
+            // Set first supported language as default
+            if (data.supportedLanguages && data.supportedLanguages.length > 0) {
+                setSelectedLanguage(data.supportedLanguages[0]);
+            }
         } catch (error) {
             console.error('Error fetching program:', error);
             router.push('/programs');
@@ -68,12 +75,50 @@ export default function ProgramDetailPage() {
     };
 
     const handleContentGenerated = (newContent: IGeneratedContent) => {
-        if (program) {
-            const updatedProgram = {
+        console.log('🔄 Content Generated:', newContent);
+
+        if (program && selectedAsset) {
+            // Find the asset and update its generated content
+            const updatedAssets = program.assets.map(asset => {
+                if (asset._id === selectedAsset._id) {
+                    // Check if content of same type and language already exists for this asset
+                    const existingContentIndex = asset.generatedContent?.findIndex(
+                        content =>
+                            content.type === newContent.type &&
+                            content.language === newContent.language
+                    ) ?? -1;
+
+                    let updatedGeneratedContent;
+                    if (existingContentIndex >= 0) {
+                        // Overwrite existing content
+                        updatedGeneratedContent = [...(asset.generatedContent || [])];
+                        updatedGeneratedContent[existingContentIndex] = newContent;
+                    } else {
+                        // Add new content
+                        updatedGeneratedContent = [...(asset.generatedContent || []), newContent];
+                    }
+
+                    const updatedAsset = {
+                        ...asset,
+                        generatedContent: updatedGeneratedContent
+                    };
+
+                    // Also update the selectedAsset state to reflect changes immediately
+                    setSelectedAsset(updatedAsset);
+
+                    return updatedAsset;
+                }
+                return asset;
+            });
+
+            console.log('🔄 Updating program state with new content');
+            setProgram({
                 ...program,
-                generatedContent: [...(program.generatedContent || []), newContent]
-            };
-            setProgram(updatedProgram);
+                assets: updatedAssets
+            } as IProgram);
+
+            // Force re-render
+            setRefreshTrigger(prev => prev + 1);
         }
     };
 
@@ -91,10 +136,10 @@ export default function ProgramDetailPage() {
 
     const handleRegenerateContent = async (contentId: string, content: IGeneratedContent) => {
         if (!selectedAsset) return;
-        
+
         try {
-            const sourceContent = selectedAsset.type === 'video' 
-                ? selectedAsset.url 
+            const sourceContent = selectedAsset.type === 'video'
+                ? selectedAsset.url
                 : selectedAsset.content;
 
             const response = await fetch('/api/regenerate-content', {
@@ -114,14 +159,37 @@ export default function ProgramDetailPage() {
 
             if (response.ok) {
                 const updatedContent = await response.json();
-                if (program) {
-                    const updatedProgram = {
+                console.log('🔄 Content Regenerated:', updatedContent);
+
+                if (program && selectedAsset) {
+                    // Update the existing content within the selected asset
+                    const updatedAssets = program.assets.map(asset => {
+                        if (asset._id === selectedAsset._id) {
+                            const updatedGeneratedContent = asset.generatedContent?.map(c =>
+                                c._id === contentId ? updatedContent : c
+                            ) || [];
+
+                            const updatedAsset = {
+                                ...asset,
+                                generatedContent: updatedGeneratedContent
+                            };
+
+                            // Also update the selectedAsset state to reflect changes immediately
+                            setSelectedAsset(updatedAsset);
+
+                            return updatedAsset;
+                        }
+                        return asset;
+                    });
+
+                    console.log('🔄 Updating program state with regenerated content');
+                    setProgram({
                         ...program,
-                        generatedContent: program.generatedContent?.map(c => 
-                            c._id === contentId ? updatedContent : c
-                        ) || []
-                    };
-                    setProgram(updatedProgram);
+                        assets: updatedAssets
+                    } as IProgram);
+
+                    // Force re-render
+                    setRefreshTrigger(prev => prev + 1);
                 }
             }
         } catch (error) {
@@ -182,115 +250,222 @@ export default function ProgramDetailPage() {
 
     const renderGeneratedContent = (content: IGeneratedContent) => {
         const Icon = getContentTypeIcon(content.type);
+        const isExpanded = expandedContent.has(content._id || '');
+        const contentId = content._id || '';
 
-        return (
-            <Card key={content._id} className="mb-4">
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                            <Icon className="h-5 w-5 text-blue-600" />
-                            <div>
-                                <CardTitle className="text-lg">{content.title}</CardTitle>
-                                <CardDescription className="flex items-center space-x-2">
-                                    <span>{getLanguageFlag(content.language)} {getLanguageName(content.language)}</span>
-                                    <span>•</span>
-                                    <span className="capitalize">{content.type.replace('_', ' ')}</span>
-                                    {content.isPublished && (
-                                        <>
-                                            <span>•</span>
-                                            <span className="text-green-600 font-medium">Published</span>
-                                        </>
-                                    )}
-                                </CardDescription>
-                            </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <Button variant="outline" size="sm">
-                                <Download className="h-4 w-4 mr-1" />
-                                Export
-                            </Button>
-                            <Button variant="outline" size="sm">
-                                {content.isPublished ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </Button>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                        {content.type === 'quiz' && Array.isArray(content.content) ? (
-                            <div className="space-y-4">
-                                <h4 className="font-medium">Quiz Questions:</h4>
-                                {content.content.slice(0, 2).map((question: any, index: number) => (
-                                    <div key={index} className="border-l-4 border-blue-500 pl-4">
-                                        <p className="font-medium">{question.question}</p>
-                                        <ul className="mt-2 space-y-1">
-                                            {question.options?.map((option: string, optIndex: number) => (
-                                                <li key={optIndex} className={`text-sm ${optIndex === question.correctAnswer ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
-                                                    {optIndex + 1}. {option}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                ))}
-                                {content.content.length > 2 && (
-                                    <p className="text-sm text-gray-500">
-                                        +{content.content.length - 2} more questions...
-                                    </p>
-                                )}
-                            </div>
-                        ) : content.type === 'flashcard' && Array.isArray(content.content) ? (
-                            <div className="space-y-3">
-                                <h4 className="font-medium">Flashcards:</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {content.content.slice(0, 4).map((card: any, index: number) => (
-                                        <div key={index} className="bg-white rounded border p-3">
-                                            <div className="text-sm font-medium text-gray-900 mb-2">
-                                                {card.front}
-                                            </div>
-                                            <div className="text-sm text-gray-600">
-                                                {card.back}
-                                            </div>
+        const renderContentPreview = () => {
+            if (content.type === 'quiz' && Array.isArray(content.content)) {
+                const questionsToShow = isExpanded ? content.content : content.content.slice(0, 2);
+                return (
+                    <div className="space-y-3">
+                        {questionsToShow.map((question: any, index: number) => (
+                            <div key={index} className="bg-white rounded-lg p-4 border border-gray-200">
+                                <p className="font-medium text-sm mb-3 text-gray-900">{question.question}</p>
+                                <div className="space-y-2">
+                                    {question.options?.map((option: string, optIndex: number) => (
+                                        <div key={optIndex} className="text-sm text-gray-600 flex items-center">
+                                            <span className={`w-4 h-4 rounded-full border-2 mr-3 flex-shrink-0 ${optIndex === question.correctAnswer
+                                                ? 'border-green-500 bg-green-100'
+                                                : 'border-gray-300'
+                                                }`}></span>
+                                            {option}
                                         </div>
                                     ))}
                                 </div>
-                                {content.content.length > 4 && (
-                                    <p className="text-sm text-gray-500">
-                                        +{content.content.length - 4} more cards...
-                                    </p>
-                                )}
-                            </div>
-                        ) : content.type === 'case_study' && typeof content.content === 'object' ? (
-                            <div className="space-y-3">
-                                <div>
-                                    <h4 className="font-medium">Scenario:</h4>
-                                    <p className="text-sm text-gray-600 mt-1">{content.content.scenario}</p>
-                                </div>
-                                {content.content.challenges && (
-                                    <div>
-                                        <h4 className="font-medium">Key Challenges:</h4>
-                                        <ul className="text-sm text-gray-600 mt-1 list-disc list-inside">
-                                            {content.content.challenges.slice(0, 3).map((challenge: string, index: number) => (
-                                                <li key={index}>{challenge}</li>
-                                            ))}
-                                        </ul>
+                                {question.explanation && isExpanded && (
+                                    <div className="mt-3 pt-3 border-t border-gray-200">
+                                        <p className="text-xs text-gray-600">
+                                            <strong>Explanation:</strong> {question.explanation}
+                                        </p>
                                     </div>
                                 )}
                             </div>
-                        ) : (
-                            <div className="prose prose-sm max-w-none">
-                                <p className="text-gray-700 line-clamp-4">
-                                    {typeof content.content === 'string'
-                                        ? content.content
-                                        : JSON.stringify(content.content).substring(0, 300) + '...'
-                                    }
+                        ))}
+                        {!isExpanded && content.content.length > 2 && (
+                            <p className="text-sm text-gray-500 text-center py-2">
+                                +{content.content.length - 2} more questions...
+                            </p>
+                        )}
+                    </div>
+                );
+            } else if (content.type === 'flashcard' && Array.isArray(content.content)) {
+                const cardsToShow = isExpanded ? content.content : content.content.slice(0, 3);
+                return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {cardsToShow.map((card: any, index: number) => (
+                            <div key={index} className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border">
+                                <div className="space-y-2">
+                                    <div>
+                                        <p className="text-xs text-blue-600 font-medium uppercase tracking-wide">Front</p>
+                                        <p className="font-medium text-sm text-blue-900">{card.front}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-purple-600 font-medium uppercase tracking-wide">Back</p>
+                                        <p className="text-sm text-gray-700">
+                                            {isExpanded ? card.back : `${card.back?.substring(0, 100)}${card.back?.length > 100 ? '...' : ''}`}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        {!isExpanded && content.content.length > 3 && (
+                            <div className="col-span-full">
+                                <p className="text-sm text-gray-500 text-center py-2">
+                                    +{content.content.length - 3} more cards...
                                 </p>
                             </div>
                         )}
                     </div>
-                    <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
-                        <span>Generated on {new Date(content.generatedAt).toLocaleDateString()}</span>
-                        <Button variant="ghost" size="sm">
-                            View Full Content
+                );
+            } else if (content.type === 'case_study' && typeof content.content === 'object') {
+                return (
+                    <div className="space-y-4">
+                        <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
+                            <h4 className="font-semibold text-amber-800 mb-2 flex items-center">
+                                <span className="mr-2">📋</span> Scenario
+                            </h4>
+                            <p className="text-sm text-gray-700">
+                                {isExpanded ? content.content.scenario : `${content.content.scenario?.substring(0, 200)}${content.content.scenario?.length > 200 ? '...' : ''}`}
+                            </p>
+                        </div>
+                        {content.content.challenges && (
+                            <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                                <h4 className="font-semibold text-red-800 mb-2 flex items-center">
+                                    <span className="mr-2">⚠️</span> Key Challenges
+                                </h4>
+                                <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
+                                    {(isExpanded ? content.content.challenges : content.content.challenges.slice(0, 3)).map((challenge: string, index: number) => (
+                                        <li key={index}>{challenge}</li>
+                                    ))}
+                                </ul>
+                                {!isExpanded && content.content.challenges.length > 3 && (
+                                    <p className="text-sm text-gray-500 mt-2">
+                                        +{content.content.challenges.length - 3} more challenges...
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                        {content.content.solution && isExpanded && (
+                            <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                                <h4 className="font-semibold text-green-800 mb-2 flex items-center">
+                                    <span className="mr-2">✅</span> Solution
+                                </h4>
+                                <p className="text-sm text-gray-700">{content.content.solution}</p>
+                            </div>
+                        )}
+                    </div>
+                );
+            } else {
+                // Handle summary, short_lecture, and other text content
+                const textContent = typeof content.content === 'string'
+                    ? content.content
+                    : JSON.stringify(content.content, null, 2);
+
+                return (
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                        <pre className="whitespace-pre-wrap text-gray-700 text-sm font-sans leading-relaxed">
+                            {isExpanded ? textContent : `${textContent.substring(0, 400)}${textContent.length > 400 ? '...' : ''}`}
+                        </pre>
+                    </div>
+                );
+            }
+        };
+
+        const getContentTypeColor = (type: string) => {
+            switch (type) {
+                case 'quiz': return 'from-green-400 to-blue-500';
+                case 'flashcard': return 'from-purple-400 to-pink-500';
+                case 'case_study': return 'from-orange-400 to-red-500';
+                case 'summary': return 'from-blue-400 to-indigo-500';
+                case 'short_lecture': return 'from-teal-400 to-cyan-500';
+                default: return 'from-gray-400 to-gray-500';
+            }
+        };
+
+        const getContentTypeEmoji = (type: string) => {
+            switch (type) {
+                case 'quiz': return '🧠';
+                case 'flashcard': return '📚';
+                case 'case_study': return '📋';
+                case 'summary': return '📝';
+                case 'short_lecture': return '🎓';
+                default: return '📄';
+            }
+        };
+
+        return (
+            <Card key={contentId} className="overflow-hidden hover:shadow-lg transition-all duration-300 border-0 shadow-md">
+                <div className={`h-2 bg-gradient-to-r ${getContentTypeColor(content.type)}`}></div>
+                <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                        <div className="flex items-start space-x-3">
+                            <div className={`p-2 rounded-lg bg-gradient-to-r ${getContentTypeColor(content.type)} text-white shadow-sm`}>
+                                <span className="text-lg">{getContentTypeEmoji(content.type)}</span>
+                            </div>
+                            <div className="flex-1">
+                                <CardTitle className="text-base font-semibold text-gray-900 leading-tight">
+                                    {content.type.replace('_', ' ').toUpperCase()}
+                                </CardTitle>
+                                <CardDescription className="text-xs text-gray-500 mt-1">
+                                    {content.isPublished && (
+                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-2">
+                                            <div className="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></div>
+                                            Published
+                                        </span>
+                                    )}
+                                    {new Date(content.generatedAt).toLocaleDateString()}
+                                </CardDescription>
+                            </div>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                    <div className="bg-white rounded-lg border border-gray-100 p-3 mb-3">
+                        {renderContentPreview()}
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-1">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRegenerateContent(contentId, content)}
+                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 py-1 h-7"
+                            >
+                                <RefreshCw className="h-3 w-3 mr-1" />
+                                <span className="text-xs">Regenerate</span>
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => navigator.clipboard.writeText(
+                                    typeof content.content === 'string'
+                                        ? content.content
+                                        : JSON.stringify(content.content, null, 2)
+                                )}
+                                className="text-gray-600 hover:text-gray-700 hover:bg-gray-50 px-2 py-1 h-7"
+                            >
+                                <Copy className="h-3 w-3 mr-1" />
+                                <span className="text-xs">Copy</span>
+                            </Button>
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleContentExpansion(contentId)}
+                            className="text-gray-600 hover:text-gray-700 hover:bg-gray-50 px-2 py-1 h-7"
+                        >
+                            {isExpanded ? (
+                                <>
+                                    <ChevronUp className="h-3 w-3 mr-1" />
+                                    <span className="text-xs">Less</span>
+                                </>
+                            ) : (
+                                <>
+                                    <ChevronDown className="h-3 w-3 mr-1" />
+                                    <span className="text-xs">More</span>
+                                </>
+                            )}
                         </Button>
                     </div>
                 </CardContent>
@@ -400,7 +575,7 @@ export default function ProgramDetailPage() {
                                 <div>
                                     <p className="text-sm font-medium text-gray-900">Generated</p>
                                     <p className="text-sm text-gray-600">
-                                        {program.generatedContent?.length || 0} items
+                                        {program.assets.reduce((total, asset) => total + (asset.generatedContent?.length || 0), 0)} items
                                     </p>
                                 </div>
                             </div>
@@ -410,7 +585,7 @@ export default function ProgramDetailPage() {
                                     <p className="text-sm font-medium text-gray-900">Languages</p>
                                     <div className="flex items-center space-x-1">
                                         {program.supportedLanguages?.slice(0, 3).map((lang) => (
-                                            <span key={lang} className="text-sm">
+                                            <span key={`lang-flag-${lang}`} className="text-sm">
                                                 {getLanguageFlag(lang)}
                                             </span>
                                         ))}
@@ -431,7 +606,7 @@ export default function ProgramDetailPage() {
                                     <div className="flex flex-wrap gap-2">
                                         {program.tags.map((tag) => (
                                             <span
-                                                key={tag}
+                                                key={`tag-${tag}`}
                                                 className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800"
                                             >
                                                 {tag}
@@ -444,155 +619,266 @@ export default function ProgramDetailPage() {
                     </CardContent>
                 </Card>
 
-                {/* Main Content */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Left Column - Assets and Content */}
+                {/* Main Content - Clean Design */}
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                    {/* Left Column - Assets & Generation (2/5 width) */}
                     <div className="lg:col-span-2 space-y-6">
-                        {/* Asset Viewer */}
-                        {selectedAsset && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center space-x-2">
-                                        {selectedAsset.type === 'video' ? (
-                                            <Video className="h-5 w-5" />
-                                        ) : (
-                                            <FileText className="h-5 w-5" />
-                                        )}
-                                        <span>{selectedAsset.title}</span>
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    {selectedAsset.type === 'video' && selectedAsset.url ? (
-                                        <YouTubeEmbed
-                                            url={selectedAsset.url}
-                                            title={selectedAsset.title}
-                                        />
-                                    ) : selectedAsset.type === 'text' && selectedAsset.content ? (
-                                        <div className="bg-gray-50 rounded-lg p-4">
-                                            <div className="prose prose-sm max-w-none">
-                                                <pre className="whitespace-pre-wrap text-gray-700">
-                                                    {selectedAsset.content}
-                                                </pre>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="text-center py-8 text-gray-500">
-                                            <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                                            <p>Content preview not available</p>
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )}
+                        {/* Assets Section */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-100">
+                                <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+                                    <BookOpen className="h-5 w-5 mr-2 text-blue-600" />
+                                    Content Assets
+                                </h2>
+                            </div>
+                            <div className="p-6">
+                                {program.assets && program.assets.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {program.assets.map((asset, index) => {
+                                            const Icon = getAssetIcon(asset.type);
+                                            const isSelected = selectedAsset?._id === asset._id;
 
-                        {/* Content Generation */}
-                        {selectedAsset && (
-                            <ContentGenerator
-                                asset={selectedAsset}
-                                programId={program._id}
-                                programLanguages={program.supportedLanguages || ['en']}
-                                onContentGenerated={handleContentGenerated}
-                                existingContent={program.generatedContent?.filter(
-                                    content => content.sourceAssetId === selectedAsset._id
+                                            return (
+                                                <div
+                                                    key={asset._id || `asset-${index}`}
+                                                    onClick={() => setSelectedAsset(asset)}
+                                                    className={`group p-4 rounded-xl cursor-pointer transition-all duration-300 ${isSelected
+                                                        ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 shadow-md'
+                                                        : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent hover:border-gray-200'
+                                                        }`}
+                                                >
+                                                    <div className="flex items-center space-x-4">
+                                                        <div className={`p-3 rounded-lg transition-colors ${isSelected
+                                                            ? 'bg-blue-100 text-blue-600'
+                                                            : 'bg-white text-gray-500 group-hover:bg-gray-200'
+                                                            }`}>
+                                                            <Icon className="h-6 w-6" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <h3 className={`font-medium truncate ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}>
+                                                                {asset.title}
+                                                            </h3>
+                                                            <p className="text-sm text-gray-500 mt-1">
+                                                                {asset.type.charAt(0).toUpperCase() + asset.type.slice(1)}
+                                                                {asset.fileSize && ` • ${formatFileSize(asset.fileSize)}`}
+                                                            </p>
+                                                        </div>
+                                                        {isSelected && (
+                                                            <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-12">
+                                        <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                                        <p className="text-gray-500 font-medium">No assets added yet</p>
+                                    </div>
                                 )}
-                            />
+                            </div>
+                        </div>
+
+                        {/* AI Generation Section */}
+                        {selectedAsset && (
+                            <div key={`generation-${selectedAsset._id}-${refreshTrigger}`} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                <div className="bg-gradient-to-r from-purple-50 to-pink-50 px-6 py-4 border-b border-gray-100">
+                                    <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+                                        <Sparkles className="h-5 w-5 mr-2 text-purple-600" />
+                                        AI Generation
+                                    </h2>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    {[
+                                        { type: 'summary', icon: '📝', label: 'Summary', gradient: 'from-blue-500 to-blue-600' },
+                                        { type: 'quiz', icon: '🧠', label: 'Quiz', gradient: 'from-green-500 to-green-600' },
+                                        { type: 'flashcard', icon: '📚', label: 'Flashcards', gradient: 'from-purple-500 to-purple-600' },
+                                        { type: 'case_study', icon: '📋', label: 'Case Study', gradient: 'from-orange-500 to-orange-600' },
+                                        { type: 'short_lecture', icon: '🎓', label: 'Short Lecture', gradient: 'from-teal-500 to-teal-600' }
+                                    ].map(({ type, icon, label, gradient }) => {
+                                        const existingContent = selectedAsset.generatedContent?.filter(
+                                            content => content.type === type
+                                        ) || [];
+
+                                        return (
+                                            <div key={`generation-type-${type}`} className="group">
+                                                <div className={`bg-gradient-to-r ${gradient} rounded-lg p-4 text-white shadow-sm`}>
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <div className="flex items-center space-x-3">
+                                                            <span className="text-2xl">{icon}</span>
+                                                            <span className="font-semibold text-lg">{label}</span>
+                                                        </div>
+                                                        {existingContent.length > 0 && (
+                                                            <div className="bg-white/20 px-3 py-1 rounded-full">
+                                                                <span className="text-xs font-medium">{existingContent.length} generated</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    <ContentGenerator
+                                                        asset={selectedAsset}
+                                                        programId={program._id as string}
+                                                        programLanguages={(() => {
+                                                            const langs = program.supportedLanguages || ['en'];
+                                                            console.log('📤 Passing to ContentGenerator:', {
+                                                                type,
+                                                                programLanguages: langs,
+                                                                existingContentLength: selectedAsset.generatedContent?.length || 0
+                                                            });
+                                                            return langs;
+                                                        })()}
+                                                        onContentGenerated={handleContentGenerated}
+                                                        existingContent={selectedAsset.generatedContent || []}
+                                                        contentType={type}
+                                                    />
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         )}
                     </div>
 
-                    {/* Right Column - Asset List and Generated Content */}
-                    <div className="space-y-6">
-                        {/* Navigation Tabs */}
-                        <div className="border-b border-gray-200">
-                            <nav className="-mb-px flex space-x-8">
-                                <button
-                                    onClick={() => setActiveTab('assets')}
-                                    className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'assets'
-                                        ? 'border-blue-500 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                                        }`}
-                                >
-                                    Assets ({program.assets?.length || 0})
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('generated')}
-                                    className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'generated'
-                                        ? 'border-blue-500 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                                        }`}
-                                >
-                                    Generated ({program.generatedContent?.length || 0})
-                                </button>
-                            </nav>
-                        </div>
+                    {/* Right Column - Asset Display & Generated Content (3/5 width) */}
+                    <div className="lg:col-span-3 space-y-6">
+                        {selectedAsset ? (
+                            <>
+                                {/* Selected Asset Display */}
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-100">
+                                        <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+                                            {selectedAsset.type === 'video' ? (
+                                                <Video className="h-5 w-5 mr-2 text-blue-600" />
+                                            ) : (
+                                                <FileText className="h-5 w-5 mr-2 text-blue-600" />
+                                            )}
+                                            {selectedAsset.title}
+                                        </h2>
+                                    </div>
+                                    <div className="p-0">
+                                        {selectedAsset.type === 'video' && selectedAsset.url ? (
+                                            <div className="aspect-video">
+                                                <YouTubeEmbed
+                                                    url={selectedAsset.url}
+                                                    title={selectedAsset.title}
+                                                />
+                                            </div>
+                                        ) : selectedAsset.type === 'text' && selectedAsset.content ? (
+                                            <div className="p-6">
+                                                <div className="bg-gray-50 rounded-lg p-6">
+                                                    <pre className="whitespace-pre-wrap text-gray-700 text-sm leading-relaxed">
+                                                        {selectedAsset.content}
+                                                    </pre>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-16 text-gray-500">
+                                                <FileText className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                                                <p className="font-medium">Content preview not available</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
 
-                        {/* Assets Tab */}
-                        {activeTab === 'assets' && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Content Assets</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    {program.assets && program.assets.length > 0 ? (
-                                        <div className="space-y-3">
-                                            {program.assets.map((asset, index) => {
-                                                const Icon = getAssetIcon(asset.type);
-                                                const isSelected = selectedAsset?._id === asset._id;
-
-                                                return (
-                                                    <div
-                                                        key={asset._id || index}
-                                                        onClick={() => setSelectedAsset(asset)}
-                                                        className={`p-3 rounded-lg border cursor-pointer transition-colors ${isSelected
-                                                            ? 'border-blue-500 bg-blue-50'
-                                                            : 'border-gray-200 hover:border-gray-300'
-                                                            }`}
-                                                    >
-                                                        <div className="flex items-center space-x-3">
-                                                            <Icon className={`h-5 w-5 ${isSelected ? 'text-blue-600' : 'text-gray-500'}`} />
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className={`text-sm font-medium truncate ${isSelected ? 'text-blue-900' : 'text-gray-900'
-                                                                    }`}>
-                                                                    {asset.title}
-                                                                </p>
-                                                                <p className="text-xs text-gray-500">
-                                                                    {asset.type.charAt(0).toUpperCase() + asset.type.slice(1)}
-                                                                    {asset.fileSize && ` • ${formatFileSize(asset.fileSize)}`}
-                                                                </p>
-                                                            </div>
-                                                            {asset.type === 'video' && (
-                                                                <Play className="h-4 w-4 text-gray-400" />
-                                                            )}
-                                                        </div>
+                                {/* Language Settings */}
+                                {/* <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b border-gray-100">
+                                        <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+                                            <Globe className="h-5 w-5 mr-2 text-green-600" />
+                                            Supported Languages
+                                        </h2>
+                                    </div>
+                                    <div className="p-6">
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                            {(program.supportedLanguages || ['en']).map(language => (
+                                                <div key={`language-setting-${language}`} className="bg-gray-50 rounded-lg p-3 flex items-center justify-between">
+                                                    <div className="flex items-center space-x-2">
+                                                        <span className="text-xl">{getLanguageFlag(language)}</span>
+                                                        <span className="text-sm font-medium text-gray-700">{getLanguageName(language)}</span>
                                                     </div>
-                                                );
-                                            })}
+                                                    <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full font-medium">
+                                                        {selectedAsset.generatedContent?.filter(
+                                                            content => content.language === language
+                                                        ).length || 0}
+                                                    </span>
+                                                </div>
+                                            ))}
                                         </div>
-                                    ) : (
-                                        <div className="text-center py-8">
-                                            <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                            <p className="text-gray-600">No assets added yet</p>
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )}
+                                    </div>
+                                </div> */}
 
-                        {/* Generated Content Tab */}
-                        {activeTab === 'generated' && (
-                            <div className="space-y-4">
-                                {program.generatedContent && program.generatedContent.length > 0 ? (
-                                    program.generatedContent.map((content) => renderGeneratedContent(content))
-                                ) : (
-                                    <Card>
-                                        <CardContent className="text-center py-8">
-                                            <Sparkles className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                            <p className="text-gray-600 mb-4">No generated content yet</p>
-                                            <p className="text-sm text-gray-500">
-                                                Select an asset and use the AI generation tools to create summaries, quizzes, and more.
-                                            </p>
-                                        </CardContent>
-                                    </Card>
+                                {/* Language Tabs & Generated Content */}
+                                {selectedAsset.generatedContent && selectedAsset.generatedContent.length > 0 && (
+                                    <div key={`content-${refreshTrigger}`} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                        <div className="bg-gradient-to-r from-purple-50 to-pink-50 px-6 py-4 border-b border-gray-100">
+                                            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+                                                <Sparkles className="h-5 w-5 mr-2 text-purple-600" />
+                                                Generated Content
+                                            </h2>
+                                        </div>
+                                        <div className="p-6">
+                                            {/* Language Tabs */}
+                                            <div className="border-b border-gray-200 mb-6">
+                                                <nav className="-mb-px flex flex-wrap gap-2">
+                                                    {(program.supportedLanguages || ['en']).map(language => {
+                                                        const languageContent = selectedAsset.generatedContent?.filter(
+                                                            content => content.language === language
+                                                        ) || [];
+
+                                                        if (languageContent.length === 0) return null;
+
+                                                        return (
+                                                            <button
+                                                                key={`language-tab-${language}`}
+                                                                onClick={() => setSelectedLanguage(language)}
+                                                                className={`py-3 px-4 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors ${selectedLanguage === language
+                                                                    ? 'border-purple-500 text-purple-600 bg-purple-50'
+                                                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                                                                    } rounded-t-lg`}
+                                                            >
+                                                                <span className="text-lg">{getLanguageFlag(language)}</span>
+                                                                <span className="font-semibold">{getLanguageName(language)}</span>
+                                                                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full font-medium">
+                                                                    {languageContent.length}
+                                                                </span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </nav>
+                                            </div>
+
+                                            {/* Generated Content for Selected Language */}
+                                            <div className="space-y-6">
+                                                {selectedAsset.generatedContent
+                                                    ?.filter(content =>
+                                                        content.language === selectedLanguage
+                                                    )
+                                                    .map((content) => (
+                                                        <div key={content._id} className="w-full">
+                                                            {renderGeneratedContent(content)}
+                                                        </div>
+                                                    ))
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
                                 )}
+                            </>
+                        ) : (
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                <div className="text-center py-24">
+                                    <div className="max-w-md mx-auto">
+                                        <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                            <BookOpen className="h-10 w-10 text-blue-600" />
+                                        </div>
+                                        <h3 className="text-xl font-semibold text-gray-900 mb-3">Select an Asset</h3>
+                                        <p className="text-gray-500 leading-relaxed">
+                                            Choose an asset from the left panel to view its content and generate AI-powered materials.
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>

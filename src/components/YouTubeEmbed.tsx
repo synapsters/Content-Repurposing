@@ -1,9 +1,5 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ExternalLink } from 'lucide-react';
-
 interface YouTubeEmbedProps {
     url: string;
     title?: string;
@@ -43,65 +39,26 @@ export default function YouTubeEmbed({ url, title }: YouTubeEmbedProps) {
 
     if (!videoId || !embedUrl) {
         return (
-            <Card className="w-full">
-                <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                        {title || 'Video'}
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(url, '_blank')}
-                        >
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            Open Externally
-                        </Button>
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="bg-gray-100 p-8 text-center rounded-lg">
-                        <p className="text-gray-600 mb-2">Unable to embed this video</p>
-                        <p className="text-sm text-gray-500">URL: {url}</p>
-                    </div>
-                </CardContent>
-            </Card>
+            <div className="bg-gray-100 p-8 text-center rounded-lg">
+                <p className="text-gray-600 mb-2">Unable to embed this video</p>
+                <p className="text-sm text-gray-500">URL: {url}</p>
+            </div>
         );
     }
 
     return (
-        <Card className="w-full">
-            <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                    {title || 'Video'}
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(url, '_blank')}
-                    >
-                        <ExternalLink className="h-4 w-4" />
-                    </Button>
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-                <div className="bg-black rounded-b-lg overflow-hidden">
-                    <iframe
-                        width="100%"
-                        height="400"
-                        src={embedUrl}
-                        title={title || "YouTube video player"}
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        allowFullScreen
-                        className="rounded-b-lg"
-                    />
-                </div>
-
-                <div className="p-4 bg-gray-50 text-xs text-gray-600 border-t">
-                    <div><strong>Video ID:</strong> {videoId}</div>
-                    <div><strong>Original URL:</strong> {url}</div>
-                    <div><strong>Embed URL:</strong> {embedUrl}</div>
-                    <div className="text-green-600 mt-1">✅ Using reliable YouTube embed</div>
-                </div>
-            </CardContent>
-        </Card>
+        <div className="w-full h-full">
+            <iframe
+                width="100%"
+                height="100%"
+                src={embedUrl}
+                title={title || "YouTube video player"}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                className="rounded-lg"
+                style={{ minHeight: '200px' }}
+            />
+        </div>
     );
 }

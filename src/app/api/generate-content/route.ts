@@ -9,6 +9,14 @@ export async function POST(request: NextRequest) {
 
         const { programId, assetId, contentType, language, sourceContent } = await request.json();
 
+        console.log('🔌 Generate Content API called:', {
+            programId,
+            assetId,
+            contentType,
+            language,
+            sourceContentLength: sourceContent?.length || 0
+        });
+
         if (!programId || !assetId || !contentType || !sourceContent) {
             return NextResponse.json(
                 { error: 'Missing required fields' },
@@ -26,11 +34,26 @@ export async function POST(request: NextRequest) {
         }
 
         // Generate content using AI
+        console.log('🤖 Calling AI generator...');
         const generatedContent = await aiGenerator.generateContent({
             type: contentType,
             sourceContent,
             language: language || 'en'
         });
+        console.log('✅ AI generation completed:', {
+            contentType,
+            language,
+            generatedLength: JSON.stringify(generatedContent).length
+        });
+
+        // Find the specific asset
+        const asset = program.assets.find(a => a._id?.toString() === assetId);
+        if (!asset) {
+            return NextResponse.json(
+                { error: 'Asset not found' },
+                { status: 404 }
+            );
+        }
 
         // Create the new generated content object
         const newContent = {
@@ -38,17 +61,21 @@ export async function POST(request: NextRequest) {
             title: `${contentType.charAt(0).toUpperCase() + contentType.slice(1)} - ${language || 'en'}`,
             content: generatedContent,
             language: language || 'en',
-            sourceAssetId: assetId,
             generatedAt: new Date(),
             isPublished: false
         };
 
-        // Add to program's generated content
-        program.generatedContent.push(newContent);
+        // Initialize generatedContent array if it doesn't exist
+        if (!asset.generatedContent) {
+            asset.generatedContent = [];
+        }
+
+        // Add to asset's generated content
+        asset.generatedContent.push(newContent);
         await program.save();
 
         // Return the newly created content
-        const savedContent = program.generatedContent[program.generatedContent.length - 1];
+        const savedContent = asset.generatedContent[asset.generatedContent.length - 1];
 
         return NextResponse.json(savedContent);
     } catch (error) {

@@ -10,6 +10,7 @@ export interface IAsset {
     fileSize?: number;
     mimeType?: string;
     uploadedAt: Date;
+    generatedContent?: IGeneratedContent[]; // Generated content stored inside each asset
 }
 
 export interface IGeneratedContent {
@@ -18,7 +19,6 @@ export interface IGeneratedContent {
     title: string;
     content: any; // Flexible content structure based on type
     language: string;
-    sourceAssetId: string;
     generatedAt: Date;
     isPublished: boolean;
 }
@@ -27,7 +27,6 @@ export interface IProgram extends Document {
     title: string;
     description: string;
     assets: IAsset[];
-    generatedContent: IGeneratedContent[];
     isPublished: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -35,27 +34,6 @@ export interface IProgram extends Document {
     supportedLanguages: string[];
     tags: string[];
 }
-
-const AssetSchema = new Schema<IAsset>({
-    type: {
-        type: String,
-        enum: ['video', 'text', 'document'],
-        required: true
-    },
-    title: {
-        type: String,
-        required: true
-    },
-    content: String,
-    url: String,
-    duration: Number,
-    fileSize: Number,
-    mimeType: String,
-    uploadedAt: {
-        type: Date,
-        default: Date.now
-    }
-});
 
 const GeneratedContentSchema = new Schema<IGeneratedContent>({
     type: {
@@ -76,10 +54,6 @@ const GeneratedContentSchema = new Schema<IGeneratedContent>({
         required: true,
         default: 'en'
     },
-    sourceAssetId: {
-        type: String,
-        required: true
-    },
     generatedAt: {
         type: Date,
         default: Date.now
@@ -88,6 +62,28 @@ const GeneratedContentSchema = new Schema<IGeneratedContent>({
         type: Boolean,
         default: false
     }
+});
+
+const AssetSchema = new Schema<IAsset>({
+    type: {
+        type: String,
+        enum: ['video', 'text', 'document'],
+        required: true
+    },
+    title: {
+        type: String,
+        required: true
+    },
+    content: String,
+    url: String,
+    duration: Number,
+    fileSize: Number,
+    mimeType: String,
+    uploadedAt: {
+        type: Date,
+        default: Date.now
+    },
+    generatedContent: [GeneratedContentSchema] // Add generated content array to each asset
 });
 
 const ProgramSchema = new Schema<IProgram>({
@@ -100,7 +96,6 @@ const ProgramSchema = new Schema<IProgram>({
         required: true
     },
     assets: [AssetSchema],
-    generatedContent: [GeneratedContentSchema],
     isPublished: {
         type: Boolean,
         default: false

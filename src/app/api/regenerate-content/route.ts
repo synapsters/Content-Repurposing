@@ -25,8 +25,17 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Find the existing content
-        const existingContentIndex = program.generatedContent.findIndex(
+        // Find the specific asset
+        const asset = program.assets.find(a => a._id?.toString() === assetId);
+        if (!asset || !asset.generatedContent) {
+            return NextResponse.json(
+                { error: 'Asset or generated content not found' },
+                { status: 404 }
+            );
+        }
+
+        // Find the existing content within the asset
+        const existingContentIndex = asset.generatedContent.findIndex(
             (content: any) => content._id.toString() === contentId
         );
 
@@ -44,21 +53,19 @@ export async function POST(request: NextRequest) {
             language: language || 'en'
         });
 
-        // Update the existing content while preserving required fields
-        const existingContent = program.generatedContent[existingContentIndex];
-        program.generatedContent[existingContentIndex] = {
-            type: existingContent.type, // Preserve required field
-            title: existingContent.title, // Preserve required field
-            sourceAssetId: existingContent.sourceAssetId, // Preserve required field
-            language: existingContent.language || language || 'en',
-            content: regeneratedContent,
-            generatedAt: new Date(),
-            isPublished: false // Reset publish status when regenerating
+        // Update the existing content in place (keep same record, update content)
+        const existingContent = asset.generatedContent[existingContentIndex];
+        asset.generatedContent[existingContentIndex] = {
+            ...existingContent, // Keep all existing fields including _id
+            content: regeneratedContent, // Update only the content
+            generatedAt: new Date(), // Update timestamp
+            isPublished: false // Reset publish status
         };
 
         await program.save();
 
-        return NextResponse.json(program.generatedContent[existingContentIndex]);
+        // Return the updated content
+        return NextResponse.json(asset.generatedContent[existingContentIndex]);
     } catch (error) {
         console.error('Error regenerating content:', error);
         return NextResponse.json(
