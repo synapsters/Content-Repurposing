@@ -169,11 +169,11 @@ export default function ProgramsPage() {
                                                     {program.description}
                                                 </CardDescription>
                                             </div>
-                                            <div className="ml-2">
+                                            {/* <div className="ml-2">
                                                 <Button variant="ghost" size="sm">
                                                     <MoreVertical className="h-4 w-4" />
                                                 </Button>
-                                            </div>
+                                            </div> */}
                                         </div>
                                     </CardHeader>
                                     <CardContent>
