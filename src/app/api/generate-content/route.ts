@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
-import Program from '@/models/Program';
+import Program, { IAsset } from '@/models/Program';
 import { aiGenerator } from '@/lib/ai-service';
 
 export async function POST(request: NextRequest) {
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         });
 
         // Find the specific asset
-        const asset = program.assets.find(a => a._id?.toString() === assetId);
+        const asset = program.assets.find((a: IAsset) => a._id?.toString() === assetId);
         if (!asset) {
             return NextResponse.json(
                 { error: 'Asset not found' },

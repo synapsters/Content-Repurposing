@@ -51,8 +51,11 @@ export default function Dashboard() {
       // Calculate stats
       const totalAssets = data.programs?.reduce((acc: number, program: IProgram) =>
         acc + (program.assets?.length || 0), 0) || 0;
-      const totalGeneratedContent = data.programs?.reduce((acc: number, program: IProgram) =>
-        acc + (program.generatedContent?.length || 0), 0) || 0;
+      const totalGeneratedContent = data.programs?.reduce((acc: number, program: IProgram) => {
+        const contentCount = program.assets?.reduce((assetAcc: number, asset) =>
+          assetAcc + (asset.generatedContent?.length || 0), 0) || 0;
+        return acc + contentCount;
+      }, 0) || 0;
       const publishedPrograms = data.programs?.filter((program: IProgram) =>
         program.isPublished).length || 0;
 
@@ -174,7 +177,7 @@ export default function Dashboard() {
                 <div className="space-y-4">
                   {programs.slice(0, 5).map((program) => (
                     <div
-                      key={program._id}
+                      key={program._id as string}
                       className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                     >
                       <div className="flex-1">
@@ -189,7 +192,7 @@ export default function Dashboard() {
                             {program.assets?.length || 0} assets
                           </span>
                           <span className="text-xs text-gray-500">
-                            {program.generatedContent?.length || 0} generated
+                            {program.assets?.reduce((acc, asset) => acc + (asset.generatedContent?.length || 0), 0) || 0} generated
                           </span>
                           {program.isPublished && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">

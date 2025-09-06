@@ -26,7 +26,7 @@ export function formatFileSize(bytes: number): string {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-export function extractTextFromVideo(videoUrl: string): Promise<string> {
+export function extractTextFromVideo(): Promise<string> {
     // This would typically integrate with a video transcription service
     // For now, return a placeholder
     return Promise.resolve("Video transcription would be implemented here using services like Google Speech-to-Text or Azure Cognitive Services");

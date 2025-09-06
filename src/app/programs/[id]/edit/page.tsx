@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -41,13 +41,7 @@ function EditProgramPage() {
         supportedLanguages: ['en'] as string[]
     });
 
-    useEffect(() => {
-        if (params.id) {
-            fetchProgram();
-        }
-    }, [params.id]);
-
-    const fetchProgram = async () => {
+    const fetchProgram = useCallback(async () => {
         try {
             const response = await fetch(`/api/programs/${params.id}`);
             if (!response.ok) {
@@ -69,7 +63,13 @@ function EditProgramPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [params.id, router]);
+
+    useEffect(() => {
+        if (params.id) {
+            fetchProgram();
+        }
+    }, [params.id, fetchProgram]);
 
     const handleInputChange = (field: string, value: string | string[]) => {
         setFormData(prev => ({
@@ -101,7 +101,7 @@ function EditProgramPage() {
                     url,
                     fileSize: file.size,
                     mimeType: file.type,
-                    uploadedAt: new Date().toISOString(),
+                    uploadedAt: new Date(),
                     isNew: true
                 };
 
@@ -162,7 +162,7 @@ function EditProgramPage() {
             type: 'video',
             title,
             url: cleanUrl,
-            uploadedAt: new Date().toISOString(),
+            uploadedAt: new Date(),
             isNew: true
         };
 
@@ -196,7 +196,7 @@ function EditProgramPage() {
             type: 'text',
             title: 'New Text Asset',
             content: '',
-            uploadedAt: new Date().toISOString(),
+            uploadedAt: new Date(),
             isNew: true
         };
         setAssets(prev => [...prev, newAsset]);
@@ -226,7 +226,8 @@ function EditProgramPage() {
             const assetsToSave = assets
                 .filter(asset => !asset.toDelete)
                 .map(asset => {
-                    const { isNew: _isNew, toDelete: _toDelete, ...cleanAsset } = asset;
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                    const { isNew, toDelete, ...cleanAsset } = asset;
                     return cleanAsset;
                 });
 

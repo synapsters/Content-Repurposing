@@ -41,7 +41,8 @@ export default function VideoPlayer({
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const playerRef = useRef<ReactPlayer>(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const playerRef = useRef<any>(null);
 
     // Normalize YouTube URLs
     const normalizeUrl = (inputUrl: string): string => {
@@ -64,7 +65,7 @@ export default function VideoPlayer({
     const normalizedUrl = normalizeUrl(url);
 
     // Check if ReactPlayer can handle this URL
-    const canPlay = ReactPlayer.canPlay(normalizedUrl);
+    const canPlay = ReactPlayer?.canPlay ? ReactPlayer.canPlay(normalizedUrl) : false;
 
     const handlePlayPause = () => {
         setPlaying(!playing);
@@ -86,10 +87,10 @@ export default function VideoPlayer({
         setPlayed(parseFloat(e.target.value));
     };
 
-    const handleSeekMouseUp = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleSeekMouseUp = (e: React.MouseEvent<HTMLInputElement>) => {
         setSeeking(false);
         if (playerRef.current) {
-            playerRef.current.seekTo(parseFloat(e.target.value));
+            playerRef.current.seekTo(parseFloat((e.target as HTMLInputElement).value));
         }
     };
 
@@ -158,49 +159,53 @@ export default function VideoPlayer({
                     ) : (
                         <>
                             <ReactPlayer
-                                ref={playerRef}
-                                url={normalizedUrl}
-                                playing={playing}
-                                muted={muted}
-                                volume={volume}
-                                onProgress={handleProgress}
-                                onReady={() => {
-                                    setLoading(false);
-                                    setError(null);
-                                    if (playerRef.current) {
-                                        const duration = playerRef.current.getDuration();
-                                        if (duration) {
-                                            handleDuration(duration);
-                                        }
-                                    }
-                                }}
-                                onError={(error) => {
-                                    console.error('Video player error:', error);
-                                    setError('Failed to load video. Please check the URL or try again.');
-                                    setLoading(false);
-                                }}
-                                onEnded={onEnded}
-                                width="100%"
-                                height="400px"
-                                config={{
-                                    youtube: {
-                                        playerVars: {
-                                            autoplay: 0,
-                                            controls: 0,
-                                            showinfo: 0,
-                                            modestbranding: 1,
-                                            rel: 0,
-                                            fs: 1,
-                                            playsinline: 1
+                                {...({
+                                    ref: playerRef,
+                                    url: normalizedUrl,
+                                    playing: playing,
+                                    muted: muted,
+                                    volume: volume,
+                                    onProgress: handleProgress,
+                                    onReady: () => {
+                                        setLoading(false);
+                                        setError(null);
+                                        if (playerRef.current) {
+                                            const duration = playerRef.current.getDuration();
+                                            if (duration) {
+                                                handleDuration(duration);
+                                            }
                                         }
                                     },
-                                    file: {
-                                        attributes: {
-                                            controlsList: 'nodownload',
-                                            crossOrigin: 'anonymous'
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    onError: (error: any) => {
+                                        console.error('Video player error:', error);
+                                        setError('Failed to load video. Please check the URL or try again.');
+                                        setLoading(false);
+                                    },
+                                    onEnded: onEnded,
+                                    width: "100%",
+                                    height: "400px",
+                                    config: {
+                                        youtube: {
+                                            playerVars: {
+                                                autoplay: 0,
+                                                controls: 0,
+                                                showinfo: 0,
+                                                modestbranding: 1,
+                                                rel: 0,
+                                                fs: 1,
+                                                playsinline: 1
+                                            }
+                                        },
+                                        file: {
+                                            attributes: {
+                                                controlsList: 'nodownload',
+                                                crossOrigin: 'anonymous'
+                                            }
                                         }
                                     }
-                                }}
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                } as any)}
                             />
 
                             {loading && (

@@ -8,8 +8,7 @@ import { Button } from '@/components/ui/button';
 import {
     BookOpen,
     Plus,
-    Settings,
-    User,
+    User as UserIcon,
     Sparkles,
     Home,
     LogOut,
@@ -59,9 +58,9 @@ export default function Navbar() {
     const getRoleIcon = (role: string) => {
         switch (role) {
             case 'admin': return Crown;
-            case 'creator': return User;
+            case 'creator': return UserIcon;
             case 'viewer': return Shield;
-            default: return User;
+            default: return UserIcon;
         }
     };
 

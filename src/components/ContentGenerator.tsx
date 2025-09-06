@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     FileText,
     HelpCircle,
@@ -11,7 +9,6 @@ import {
     CreditCard,
     Loader2,
     RefreshCw,
-    Globe,
     CheckCircle
 } from 'lucide-react';
 import { IAsset, IGeneratedContent } from '@/models/Program';
@@ -86,7 +83,6 @@ export default function ContentGenerator({
         });
         return programLanguages || [];
     });
-    const [showLanguageSelector, setShowLanguageSelector] = useState(false);
 
     // Update selected languages when program languages change
     useEffect(() => {
@@ -98,7 +94,7 @@ export default function ContentGenerator({
         if (programLanguages && programLanguages.length > 0) {
             setSelectedLanguages(programLanguages);
         }
-    }, [programLanguages]);
+    }, [programLanguages, selectedLanguages]);
 
     const handleGenerate = async (contentType: string) => {
         setGenerating(contentType);
@@ -154,8 +150,9 @@ export default function ContentGenerator({
                     results.push({ language, success: true });
                 } catch (error) {
                     console.error(`Error generating content for ${language}:`, error);
-                    errors.push({ language, error: error.message });
-                    results.push({ language, success: false, error: error.message });
+                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                    errors.push({ language, error: errorMessage });
+                    results.push({ language, success: false, error: errorMessage });
                 }
             }
 
@@ -175,7 +172,8 @@ export default function ContentGenerator({
             }
         } catch (error) {
             console.error('Unexpected error during content generation:', error);
-            alert(`Unexpected error: ${error.message}`);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            alert(`Unexpected error: ${errorMessage}`);
         } finally {
             setGenerating(null);
             setGenerationProgress(null);

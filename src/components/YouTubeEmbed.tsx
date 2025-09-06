@@ -61,7 +61,7 @@ export default function YouTubeEmbed({ url, title }: YouTubeEmbedProps) {
             }
 
             return null;
-        } catch (e) {
+        } catch {
             // URL constructor failed, but we already tried regex patterns above
             console.warn('Could not parse YouTube URL:', url);
             return null;

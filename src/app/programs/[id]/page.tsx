@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
 import YouTubeEmbed from '@/components/YouTubeEmbed';
 import ContentGenerator from '@/components/ContentGenerator';
-import { QuizQuestion, FlashCard } from '@/lib/ai-service';
+import { QuizQuestion, FlashCard, CaseStudy } from '@/lib/ai-service';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -40,13 +40,7 @@ export default function ProgramDetailPage() {
     const [regeneratingContent, setRegeneratingContent] = useState<Set<string>>(new Set());
     const [generatingContent, setGeneratingContent] = useState<boolean>(false);
 
-    useEffect(() => {
-        if (params.id) {
-            fetchProgram();
-        }
-    }, [params.id]);
-
-    const fetchProgram = async () => {
+    const fetchProgram = useCallback(async () => {
         try {
             const response = await fetch(`/api/programs/${params.id}`);
             if (!response.ok) {
@@ -70,7 +64,13 @@ export default function ProgramDetailPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [params.id, router]);
+
+    useEffect(() => {
+        if (params.id) {
+            fetchProgram();
+        }
+    }, [params.id, fetchProgram]);
 
     const handleGenerationStart = () => {
         console.log('🚀 Generation started');
@@ -339,31 +339,15 @@ export default function ProgramDetailPage() {
         }
     };
 
-    const getContentTypeIcon = (type: string) => {
-        switch (type) {
-            case 'summary':
-                return FileText;
-            case 'quiz':
-                return BookOpen;
-            case 'case_study':
-                return BookOpen;
-            case 'short_lecture':
-                return Video;
-            case 'flashcard':
-                return BookOpen;
-            default:
-                return FileText;
-        }
-    };
 
     const renderGeneratedContent = (content: IGeneratedContent) => {
-        const Icon = getContentTypeIcon(content.type);
         const isExpanded = expandedContent.has(content._id || '');
         const contentId = content._id || '';
 
         const renderContentPreview = () => {
             if (content.type === 'quiz' && Array.isArray(content.content)) {
-                const questionsToShow = isExpanded ? content.content : content.content.slice(0, 2);
+                const quizContent = content.content as QuizQuestion[];
+                const questionsToShow = isExpanded ? quizContent : quizContent.slice(0, 2);
                 return (
                     <div className="space-y-3">
                         {questionsToShow.map((question: QuizQuestion, index: number) => (
@@ -389,15 +373,16 @@ export default function ProgramDetailPage() {
                                 )}
                             </div>
                         ))}
-                        {!isExpanded && content.content.length > 2 && (
+                        {!isExpanded && quizContent.length > 2 && (
                             <p className="text-sm text-gray-500 text-center py-2">
-                                +{content.content.length - 2} more questions...
+                                +{quizContent.length - 2} more questions...
                             </p>
                         )}
                     </div>
                 );
             } else if (content.type === 'flashcard' && Array.isArray(content.content)) {
-                const cardsToShow = isExpanded ? content.content : content.content.slice(0, 3);
+                const flashcardContent = content.content as FlashCard[];
+                const cardsToShow = isExpanded ? flashcardContent : flashcardContent.slice(0, 3);
                 return (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {cardsToShow.map((card: FlashCard, index: number) => (
@@ -416,16 +401,17 @@ export default function ProgramDetailPage() {
                                 </div>
                             </div>
                         ))}
-                        {!isExpanded && content.content.length > 3 && (
+                        {!isExpanded && flashcardContent.length > 3 && (
                             <div className="col-span-full">
                                 <p className="text-sm text-gray-500 text-center py-2">
-                                    +{content.content.length - 3} more cards...
+                                    +{flashcardContent.length - 3} more cards...
                                 </p>
                             </div>
                         )}
                     </div>
                 );
             } else if (content.type === 'case_study' && typeof content.content === 'object') {
+                const caseStudyContent = content.content as CaseStudy;
                 return (
                     <div className="space-y-4">
                         <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
@@ -433,32 +419,48 @@ export default function ProgramDetailPage() {
                                 <span className="mr-2">📋</span> Scenario
                             </h4>
                             <p className="text-sm text-gray-700">
-                                {isExpanded ? content.content.scenario : `${content.content.scenario?.substring(0, 200)}${content.content.scenario?.length > 200 ? '...' : ''}`}
+                                {isExpanded ? caseStudyContent.scenario : `${caseStudyContent.scenario?.substring(0, 200)}${caseStudyContent.scenario?.length > 200 ? '...' : ''}`}
                             </p>
                         </div>
-                        {content.content.challenges && (
+                        {caseStudyContent.challenges && (
                             <div className="bg-red-50 rounded-lg p-4 border border-red-200">
                                 <h4 className="font-semibold text-red-800 mb-2 flex items-center">
                                     <span className="mr-2">⚠️</span> Key Challenges
                                 </h4>
                                 <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
-                                    {(isExpanded ? content.content.challenges : content.content.challenges.slice(0, 3)).map((challenge: string, index: number) => (
+                                    {(isExpanded ? caseStudyContent.challenges : caseStudyContent.challenges.slice(0, 3)).map((challenge: string, index: number) => (
                                         <li key={index}>{challenge}</li>
                                     ))}
                                 </ul>
-                                {!isExpanded && content.content.challenges.length > 3 && (
+                                {!isExpanded && caseStudyContent.challenges.length > 3 && (
                                     <p className="text-sm text-gray-500 mt-2">
-                                        +{content.content.challenges.length - 3} more challenges...
+                                        +{caseStudyContent.challenges.length - 3} more challenges...
                                     </p>
                                 )}
                             </div>
                         )}
-                        {content.content.solution && isExpanded && (
+                        {caseStudyContent.questions && isExpanded && (
+                            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                                <h4 className="font-semibold text-blue-800 mb-2 flex items-center">
+                                    <span className="mr-2">❓</span> Questions
+                                </h4>
+                                <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
+                                    {caseStudyContent.questions.map((question: string, index: number) => (
+                                        <li key={index}>{question}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                        {caseStudyContent.learningObjectives && isExpanded && (
                             <div className="bg-green-50 rounded-lg p-4 border border-green-200">
                                 <h4 className="font-semibold text-green-800 mb-2 flex items-center">
-                                    <span className="mr-2">✅</span> Solution
+                                    <span className="mr-2">🎯</span> Learning Objectives
                                 </h4>
-                                <p className="text-sm text-gray-700">{content.content.solution}</p>
+                                <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
+                                    {caseStudyContent.learningObjectives.map((objective: string, index: number) => (
+                                        <li key={index}>{objective}</li>
+                                    ))}
+                                </ul>
                             </div>
                         )}
                     </div>

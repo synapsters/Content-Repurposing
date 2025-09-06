@@ -69,8 +69,8 @@ export default function SimpleVideoPlayer({ url, title }: SimpleVideoPlayerProps
         setError(null);
     };
 
-    const handleError = (error: Error | string) => {
-        console.error('Video error:', error);
+    const handleError = () => {
+        console.error('Video error occurred');
         setError('Failed to load video. Trying YouTube embed fallback...');
         setReady(false);
 
@@ -181,26 +181,28 @@ export default function SimpleVideoPlayer({ url, title }: SimpleVideoPlayerProps
                 ) : (
                     <div className="relative bg-black rounded-lg overflow-hidden">
                         <ReactPlayer
-                            url={cleanedUrl}
-                            playing={playing}
-                            controls={true}
-                            width="100%"
-                            height="400px"
-                            onReady={handleReady}
-                            onError={handleError}
-                            onStart={() => {
-                                console.log('Video started playing');
-                                setReady(true);
-                            }}
-                            onPlay={() => {
-                                console.log('Video play event');
-                                setPlaying(true);
-                            }}
-                            onPause={() => {
-                                console.log('Video pause event');
-                                setPlaying(false);
-                            }}
-                            {...{}}
+                            {...({
+                                url: cleanedUrl,
+                                playing: playing,
+                                controls: true,
+                                width: "100%",
+                                height: "400px",
+                                onReady: handleReady,
+                                onError: handleError,
+                                onStart: () => {
+                                    console.log('Video started playing');
+                                    setReady(true);
+                                },
+                                onPlay: () => {
+                                    console.log('Video play event');
+                                    setPlaying(true);
+                                },
+                                onPause: () => {
+                                    console.log('Video pause event');
+                                    setPlaying(false);
+                                }
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            } as any)}
                         />
                         {!ready && (
                             <div className="absolute inset-0 flex items-center justify-center bg-black/50">

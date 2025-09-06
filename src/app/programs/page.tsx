@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -13,15 +13,13 @@ import {
     BookOpen,
     Video,
     FileText,
-    Globe,
     Calendar,
     MoreVertical,
     Edit,
-    Trash2,
     Eye
 } from 'lucide-react';
 import { IProgram } from '@/models/Program';
-import { formatDuration, getLanguageFlag } from '@/lib/utils';
+import { getLanguageFlag } from '@/lib/utils';
 
 export default function ProgramsPage() {
     const [programs, setPrograms] = useState<IProgram[]>([]);
@@ -30,11 +28,7 @@ export default function ProgramsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
 
-    useEffect(() => {
-        fetchPrograms();
-    }, [currentPage, searchTerm]);
-
-    const fetchPrograms = async () => {
+    const fetchPrograms = useCallback(async () => {
         try {
             setLoading(true);
             const params = new URLSearchParams({
@@ -53,7 +47,11 @@ export default function ProgramsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [currentPage, searchTerm]);
+
+    useEffect(() => {
+        fetchPrograms();
+    }, [currentPage, searchTerm, fetchPrograms]);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -145,7 +143,7 @@ export default function ProgramsPage() {
                     <>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {programs.map((program) => (
-                                <Card key={program._id} className="hover:shadow-lg transition-shadow">
+                                <Card key={program._id as string} className="hover:shadow-lg transition-shadow">
                                     <CardHeader>
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
@@ -193,7 +191,7 @@ export default function ProgramsPage() {
                                                     </span>
                                                     <span className="flex items-center">
                                                         <FileText className="h-4 w-4 mr-1" />
-                                                        {program.generatedContent?.length || 0} generated
+                                                        {program.assets?.reduce((acc, asset) => acc + (asset.generatedContent?.length || 0), 0) || 0} generated
                                                     </span>
                                                 </div>
                                             </div>
