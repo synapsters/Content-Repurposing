@@ -16,7 +16,7 @@ const navigation = [
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Programs', href: '/programs', icon: BookOpen },
     { name: 'Create Program', href: '/programs/create', icon: Plus },
-    { name: 'Settings', href: '/settings', icon: Settings },
+    // { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 export default function Navbar() {
@@ -46,8 +46,8 @@ export default function Navbar() {
                                         key={item.name}
                                         href={item.href}
                                         className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${isActive
-                                                ? 'border-blue-500 text-gray-900'
-                                                : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                                            ? 'border-blue-500 text-gray-900'
+                                            : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                                             }`}
                                     >
                                         <Icon className="h-4 w-4 mr-2" />

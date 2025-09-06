@@ -22,6 +22,8 @@ interface ContentGeneratorProps {
     programId: string;
     programLanguages: string[]; // Languages supported by the program
     onContentGenerated: (content: IGeneratedContent) => void;
+    onGenerationStart?: () => void;
+    onGenerationEnd?: () => void;
     existingContent?: IGeneratedContent[];
     contentType?: string; // Optional: filter to specific content type
 }
@@ -69,6 +71,8 @@ export default function ContentGenerator({
     programId,
     programLanguages,
     onContentGenerated,
+    onGenerationStart,
+    onGenerationEnd,
     existingContent = [],
     contentType
 }: ContentGeneratorProps) {
@@ -98,6 +102,7 @@ export default function ContentGenerator({
 
     const handleGenerate = async (contentType: string) => {
         setGenerating(contentType);
+        onGenerationStart?.(); // Notify parent that generation started
 
         const languagesToGenerate = selectedLanguages.length > 0 ? selectedLanguages : programLanguages;
 
@@ -110,6 +115,7 @@ export default function ContentGenerator({
         if (languagesToGenerate.length === 0) {
             alert('Please select at least one language for content generation');
             setGenerating(null);
+            onGenerationEnd?.(); // Notify parent that generation ended
             return;
         }
 
@@ -173,6 +179,7 @@ export default function ContentGenerator({
         } finally {
             setGenerating(null);
             setGenerationProgress(null);
+            onGenerationEnd?.(); // Notify parent that generation ended
         }
     };
 
@@ -205,6 +212,7 @@ export default function ContentGenerator({
             console.error('Error regenerating content:', error);
         } finally {
             setGenerating(null);
+            onGenerationEnd?.(); // Notify parent that generation ended
         }
     };
 

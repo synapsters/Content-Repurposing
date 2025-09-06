@@ -41,6 +41,8 @@ export default function ProgramDetailPage() {
     const [expandedContent, setExpandedContent] = useState<Set<string>>(new Set());
     const [selectedLanguage, setSelectedLanguage] = useState<string>('en');
     const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+    const [regeneratingContent, setRegeneratingContent] = useState<Set<string>>(new Set());
+    const [generatingContent, setGeneratingContent] = useState<boolean>(false);
 
     useEffect(() => {
         if (params.id) {
@@ -74,13 +76,32 @@ export default function ProgramDetailPage() {
         }
     };
 
+    const handleGenerationStart = () => {
+        console.log('🚀 Generation started');
+        setGeneratingContent(true);
+    };
+
+    const handleGenerationEnd = () => {
+        console.log('🏁 Generation ended');
+        setGeneratingContent(false);
+    };
+
     const handleContentGenerated = (newContent: IGeneratedContent) => {
         console.log('🔄 Content Generated:', newContent);
+        setGeneratingContent(false); // End generation state
+        console.log('🔍 Current selectedAsset before update:', selectedAsset?._id);
+        console.log('🔍 New content details:', {
+            type: newContent.type,
+            language: newContent.language,
+            hasId: !!newContent._id
+        });
 
         if (program && selectedAsset) {
             // Find the asset and update its generated content
             const updatedAssets = program.assets.map(asset => {
                 if (asset._id === selectedAsset._id) {
+                    console.log('🎯 Found matching asset for content generation');
+
                     // Check if content of same type and language already exists for this asset
                     const existingContentIndex = asset.generatedContent?.findIndex(
                         content =>
@@ -90,21 +111,25 @@ export default function ProgramDetailPage() {
 
                     let updatedGeneratedContent;
                     if (existingContentIndex >= 0) {
+                        console.log('✏️ Overwriting existing content at index:', existingContentIndex);
                         // Overwrite existing content
                         updatedGeneratedContent = [...(asset.generatedContent || [])];
                         updatedGeneratedContent[existingContentIndex] = newContent;
                     } else {
+                        console.log('➕ Adding new content to asset');
                         // Add new content
                         updatedGeneratedContent = [...(asset.generatedContent || []), newContent];
                     }
+
+                    console.log('🔍 Updated content count:', {
+                        before: asset.generatedContent?.length || 0,
+                        after: updatedGeneratedContent.length
+                    });
 
                     const updatedAsset = {
                         ...asset,
                         generatedContent: updatedGeneratedContent
                     };
-
-                    // Also update the selectedAsset state to reflect changes immediately
-                    setSelectedAsset(updatedAsset);
 
                     return updatedAsset;
                 }
@@ -112,13 +137,39 @@ export default function ProgramDetailPage() {
             });
 
             console.log('🔄 Updating program state with new content');
-            setProgram({
-                ...program,
-                assets: updatedAssets
-            } as IProgram);
 
-            // Force re-render
-            setRefreshTrigger(prev => prev + 1);
+            // Use functional updates for more reliable state management
+            setProgram(prevProgram => {
+                if (!prevProgram) return prevProgram;
+                return {
+                    ...prevProgram,
+                    assets: updatedAssets
+                } as IProgram;
+            });
+
+            // Update selectedAsset with functional update too
+            setSelectedAsset(prevAsset => {
+                if (!prevAsset) return prevAsset;
+                const updatedAsset = updatedAssets.find(a => a._id === prevAsset._id);
+                console.log('🔄 Updated selectedAsset with new content count:', updatedAsset?.generatedContent?.length || 0);
+                return updatedAsset || prevAsset;
+            });
+
+            // Multiple refresh triggers for maximum reliability
+            const newRefreshTrigger = Date.now();
+            console.log('🔄 Setting refresh trigger for new content:', newRefreshTrigger);
+            setRefreshTrigger(newRefreshTrigger);
+
+            // Additional state updates for reliability
+            setTimeout(() => {
+                console.log('🔄 Secondary state update for new content reliability');
+                setRefreshTrigger(Date.now());
+            }, 50);
+
+            setTimeout(() => {
+                console.log('🔄 Tertiary state update for maximum new content reliability');
+                setRefreshTrigger(Date.now());
+            }, 150);
         }
     };
 
@@ -136,6 +187,9 @@ export default function ProgramDetailPage() {
 
     const handleRegenerateContent = async (contentId: string, content: IGeneratedContent) => {
         if (!selectedAsset) return;
+
+        // Add to regenerating set
+        setRegeneratingContent(prev => new Set([...prev, contentId]));
 
         try {
             const sourceContent = selectedAsset.type === 'video'
@@ -160,19 +214,39 @@ export default function ProgramDetailPage() {
             if (response.ok) {
                 const updatedContent = await response.json();
                 console.log('🔄 Content Regenerated:', updatedContent);
+                console.log('🔍 Current selectedAsset before update:', selectedAsset._id);
+                console.log('🔍 Content ID being updated:', contentId);
 
                 if (program && selectedAsset) {
                     // Update the existing content within the selected asset
                     const updatedAssets = program.assets.map(asset => {
                         if (asset._id === selectedAsset._id) {
-                            const updatedGeneratedContent = asset.generatedContent?.map(c =>
-                                c._id === contentId ? updatedContent : c
-                            ) || [];
+                            console.log('🎯 Found matching asset, updating content...');
+                            const updatedGeneratedContent = asset.generatedContent?.map(c => {
+                                // Try both string comparison and object comparison
+                                const cId = c._id?.toString();
+                                const targetId = contentId?.toString();
+
+                                if (cId === targetId) {
+                                    console.log('✅ Found content to update:', c._id, '→', updatedContent._id);
+                                    return { ...updatedContent, _id: c._id }; // Preserve original _id
+                                }
+                                return c;
+                            }) || [];
+
+                            console.log('🔍 Content update mapping:', {
+                                originalCount: asset.generatedContent?.length || 0,
+                                updatedCount: updatedGeneratedContent.length,
+                                targetContentId: contentId,
+                                foundMatch: updatedGeneratedContent.some(c => c._id?.toString() === contentId?.toString())
+                            });
 
                             const updatedAsset = {
                                 ...asset,
                                 generatedContent: updatedGeneratedContent
                             };
+
+                            console.log('🔄 Updated asset generated content count:', updatedGeneratedContent.length);
 
                             // Also update the selectedAsset state to reflect changes immediately
                             setSelectedAsset(updatedAsset);
@@ -183,17 +257,55 @@ export default function ProgramDetailPage() {
                     });
 
                     console.log('🔄 Updating program state with regenerated content');
-                    setProgram({
-                        ...program,
-                        assets: updatedAssets
-                    } as IProgram);
 
-                    // Force re-render
-                    setRefreshTrigger(prev => prev + 1);
+                    // Use functional updates for more reliable state management
+                    setProgram(prevProgram => {
+                        if (!prevProgram) return prevProgram;
+                        return {
+                            ...prevProgram,
+                            assets: updatedAssets
+                        } as IProgram;
+                    });
+
+                    // Update selectedAsset with functional update too
+                    setSelectedAsset(prevAsset => {
+                        if (!prevAsset) return prevAsset;
+                        const updatedAsset = updatedAssets.find(a => a._id === prevAsset._id);
+                        return updatedAsset || prevAsset;
+                    });
+
+                    // Force re-render with timestamp for uniqueness
+                    const newRefreshTrigger = Date.now();
+                    console.log('🔄 Setting refresh trigger:', newRefreshTrigger);
+                    setRefreshTrigger(newRefreshTrigger);
+
+                    // Multiple state updates for reliability
+                    setTimeout(() => {
+                        console.log('🔄 Secondary state update for reliability');
+                        setRefreshTrigger(Date.now());
+                    }, 50);
+
+                    setTimeout(() => {
+                        console.log('🔄 Tertiary state update for maximum reliability');
+                        setRefreshTrigger(Date.now());
+                    }, 150);
                 }
+            } else {
+                console.error('❌ Regeneration failed:', response.status, response.statusText);
+                const errorData = await response.json().catch(() => ({}));
+                console.error('❌ Error details:', errorData);
+                alert('Failed to regenerate content. Please try again.');
             }
         } catch (error) {
             console.error('Error regenerating content:', error);
+            alert('Error regenerating content. Please try again.');
+        } finally {
+            // Remove from regenerating set
+            setRegeneratingContent(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(contentId);
+                return newSet;
+            });
         }
     };
 
@@ -430,10 +542,13 @@ export default function ProgramDetailPage() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleRegenerateContent(contentId, content)}
-                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 py-1 h-7"
+                                disabled={regeneratingContent.has(contentId)}
+                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 py-1 h-7 disabled:opacity-50"
                             >
-                                <RefreshCw className="h-3 w-3 mr-1" />
-                                <span className="text-xs">Regenerate</span>
+                                <RefreshCw className={`h-3 w-3 mr-1 ${regeneratingContent.has(contentId) ? 'animate-spin' : ''}`} />
+                                <span className="text-xs">
+                                    {regeneratingContent.has(contentId) ? 'Regenerating...' : 'Regenerate'}
+                                </span>
                             </Button>
                             <Button
                                 variant="ghost"
@@ -516,10 +631,10 @@ export default function ProgramDetailPage() {
                         </div>
                     </div>
                     <div className="flex items-center space-x-2 mt-4 sm:mt-0">
-                        <Button variant="outline" size="sm">
+                        {/* <Button variant="outline" size="sm">
                             <Share className="h-4 w-4 mr-2" />
                             Share
-                        </Button>
+                        </Button> */}
                         <Button
                             variant="outline"
                             size="sm"
@@ -729,6 +844,8 @@ export default function ProgramDetailPage() {
                                                             return langs;
                                                         })()}
                                                         onContentGenerated={handleContentGenerated}
+                                                        onGenerationStart={handleGenerationStart}
+                                                        onGenerationEnd={handleGenerationEnd}
                                                         existingContent={selectedAsset.generatedContent || []}
                                                         contentType={type}
                                                     />
@@ -809,6 +926,33 @@ export default function ProgramDetailPage() {
                                     </div>
                                 </div> */}
 
+                                {/* Loading Indicators */}
+                                {(regeneratingContent.size > 0 || generatingContent) && (
+                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                                        <div className="flex items-center space-x-3">
+                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                                            <div>
+                                                {regeneratingContent.size > 0 && (
+                                                    <>
+                                                        <p className="text-blue-800 font-medium">Regenerating Content...</p>
+                                                        <p className="text-blue-600 text-sm">
+                                                            {regeneratingContent.size} item{regeneratingContent.size > 1 ? 's' : ''} being updated
+                                                        </p>
+                                                    </>
+                                                )}
+                                                {generatingContent && (
+                                                    <>
+                                                        <p className="text-blue-800 font-medium">Generating New Content...</p>
+                                                        <p className="text-blue-600 text-sm">
+                                                            Creating content with AI, please wait...
+                                                        </p>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Language Tabs & Generated Content */}
                                 {selectedAsset.generatedContent && selectedAsset.generatedContent.length > 0 && (
                                     <div key={`content-${refreshTrigger}`} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -856,7 +1000,7 @@ export default function ProgramDetailPage() {
                                                         content.language === selectedLanguage
                                                     )
                                                     .map((content) => (
-                                                        <div key={content._id} className="w-full">
+                                                        <div key={`${content._id}-${content.generatedAt}-${refreshTrigger}`} className="w-full">
                                                             {renderGeneratedContent(content)}
                                                         </div>
                                                     ))
