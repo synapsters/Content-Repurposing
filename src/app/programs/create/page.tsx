@@ -135,7 +135,7 @@ export default function CreateProgramPage() {
         if (!videoInput.trim()) return;
 
         let url = videoInput.trim();
-        let title = 'YouTube Video';
+        const title = 'YouTube Video';
         let videoId = '';
 
         // Extract video ID from various YouTube URL formats

@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
         // Find the existing content within the asset
         const existingContentIndex = asset.generatedContent.findIndex(
-            (content: any) => content._id.toString() === contentId
+            (content) => content._id?.toString() === contentId
         );
 
         if (existingContentIndex === -1) {

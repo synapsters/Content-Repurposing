@@ -81,7 +81,7 @@ export async function DELETE(
         }
 
         program.assets = program.assets.filter(
-            (asset: any) => asset._id.toString() !== assetId
+            (asset) => asset._id?.toString() !== assetId
         );
 
         await program.save();
