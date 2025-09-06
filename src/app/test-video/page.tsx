@@ -28,9 +28,9 @@ export default function TestVideoPage() {
                         <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
                             <h3 className="font-semibold text-blue-800 mb-2">✅ Best Ways to Get YouTube URLs:</h3>
                             <ol className="list-decimal list-inside space-y-2 text-sm text-blue-700">
-                                <li><strong>Share Button:</strong> Click "Share" below YouTube video → Copy URL</li>
+                                <li><strong>Share Button:</strong> Click &quot;Share&quot; below YouTube video → Copy URL</li>
                                 <li><strong>Address Bar:</strong> Copy URL from browser address bar while watching</li>
-                                <li><strong>Right-click:</strong> Right-click video → "Copy video URL"</li>
+                                <li><strong>Right-click:</strong> Right-click video → &quot;Copy video URL&quot;</li>
                             </ol>
                         </div>
 

@@ -70,7 +70,7 @@ export default function VideoPlayer({
         setPlaying(!playing);
     };
 
-    const handleProgress = (progress: any) => {
+    const handleProgress = (progress: { played: number; playedSeconds: number; loaded: number; loadedSeconds: number }) => {
         if (!seeking) {
             setPlayed(progress.played);
             setPlayedSeconds(progress.playedSeconds);

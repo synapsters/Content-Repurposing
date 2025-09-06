@@ -8,7 +8,7 @@ import { Trash2, RefreshCw, AlertTriangle, CheckCircle } from 'lucide-react';
 export default function LocalStorageDebugger() {
     const [userData, setUserData] = useState<string | null>(null);
     const [isValid, setIsValid] = useState<boolean | null>(null);
-    const [parsedUser, setParsedUser] = useState<any>(null);
+    const [parsedUser, setParsedUser] = useState<object | null>(null);
 
     const checkUserData = () => {
         try {

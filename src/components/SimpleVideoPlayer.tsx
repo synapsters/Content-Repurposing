@@ -69,7 +69,7 @@ export default function SimpleVideoPlayer({ url, title }: SimpleVideoPlayerProps
         setError(null);
     };
 
-    const handleError = (error: any) => {
+    const handleError = (error: Error | string) => {
         console.error('Video error:', error);
         setError('Failed to load video. Trying YouTube embed fallback...');
         setReady(false);
@@ -200,7 +200,7 @@ export default function SimpleVideoPlayer({ url, title }: SimpleVideoPlayerProps
                                 console.log('Video pause event');
                                 setPlaying(false);
                             }}
-                            {...({} as any)}
+                            {...{}}
                         />
                         {!ready && (
                             <div className="absolute inset-0 flex items-center justify-center bg-black/50">
