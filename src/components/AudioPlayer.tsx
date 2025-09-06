@@ -107,26 +107,38 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
             return;
         }
 
-        if (isPaused) {
-            // Resume
-            speechSynthesis.resume();
-            setIsPaused(false);
-            setIsPlaying(true);
-        } else {
-            // Start new
-            const utterance = initializeSpeech();
-            if (utterance) {
-                utteranceRef.current = utterance;
-                speechSynthesis.speak(utterance);
+        try {
+            if (isPaused) {
+                // Resume
+                speechSynthesis.resume();
+                setIsPaused(false);
+                setIsPlaying(true);
+            } else {
+                // Start new
+                const utterance = initializeSpeech();
+                if (utterance) {
+                    utteranceRef.current = utterance;
+                    speechSynthesis.speak(utterance);
+                }
             }
+        } catch (error) {
+            console.error('Error playing audio:', error);
+            setIsPlaying(false);
+            setIsPaused(false);
         }
     };
 
     const handlePause = () => {
         if (isPlaying) {
-            speechSynthesis.pause();
-            setIsPaused(true);
-            setIsPlaying(false);
+            try {
+                speechSynthesis.pause();
+                setIsPaused(true);
+                setIsPlaying(false);
+            } catch (error) {
+                console.warn('Error pausing speech synthesis:', error);
+                setIsPlaying(false);
+                setIsPaused(false);
+            }
         }
     };
 
@@ -136,7 +148,7 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
         } catch (error) {
             console.warn('Error stopping speech synthesis:', error);
         }
-        
+
         setIsPlaying(false);
         setIsPaused(false);
         setCurrentPosition(0);
@@ -162,7 +174,11 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
     // Cleanup on unmount
     useEffect(() => {
         return () => {
-            speechSynthesis.cancel();
+            try {
+                speechSynthesis.cancel();
+            } catch (error) {
+                console.warn('Error during cleanup:', error);
+            }
             if (intervalRef.current) {
                 clearInterval(intervalRef.current);
             }
