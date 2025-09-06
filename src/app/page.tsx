@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -17,8 +18,10 @@ import {
   BarChart3
 } from 'lucide-react';
 import { IProgram } from '@/models/Program';
+import { getUser } from '@/lib/auth';
 
 export default function Dashboard() {
+  const router = useRouter();
   const [programs, setPrograms] = useState<IProgram[]>([]);
   const [stats, setStats] = useState({
     totalPrograms: 0,
@@ -29,8 +32,15 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check if user is authenticated
+    const user = getUser();
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+
     fetchDashboardData();
-  }, []);
+  }, [router]);
 
   const fetchDashboardData = async () => {
     try {

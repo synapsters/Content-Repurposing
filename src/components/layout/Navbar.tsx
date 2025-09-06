@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
     BookOpen,
@@ -9,7 +10,11 @@ import {
     Settings,
     User,
     Sparkles,
-    Home
+    Home,
+    LogOut,
+    LogIn,
+    Crown,
+    Shield
 } from 'lucide-react';
 
 const navigation = [
@@ -21,6 +26,52 @@ const navigation = [
 
 export default function Navbar() {
     const pathname = usePathname();
+    const router = useRouter();
+    const [user, setUser] = useState<any>(null);
+
+    useEffect(() => {
+        // Check if user is logged in
+        const userData = localStorage.getItem('user');
+        if (userData) {
+            try {
+                setUser(JSON.parse(userData));
+            } catch (error) {
+                console.error('Invalid user data in localStorage:', error);
+                // Clear invalid data
+                localStorage.removeItem('user');
+                setUser(null);
+            }
+        }
+    }, []);
+
+    const handleLogout = async () => {
+        try {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            localStorage.removeItem('user');
+            setUser(null);
+            router.push('/login');
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+    };
+
+    const getRoleIcon = (role: string) => {
+        switch (role) {
+            case 'admin': return Crown;
+            case 'creator': return User;
+            case 'viewer': return Shield;
+            default: return User;
+        }
+    };
+
+    const getRoleColor = (role: string) => {
+        switch (role) {
+            case 'admin': return 'text-purple-600 bg-purple-100';
+            case 'creator': return 'text-blue-600 bg-blue-100';
+            case 'viewer': return 'text-green-600 bg-green-100';
+            default: return 'text-gray-600 bg-gray-100';
+        }
+    };
 
     return (
         <nav className="bg-white shadow-sm border-b border-gray-200">
@@ -57,11 +108,42 @@ export default function Navbar() {
                             })}
                         </div>
                     </div>
-                    <div className="hidden sm:ml-6 sm:flex sm:items-center">
-                        <Button variant="outline" size="sm">
-                            <User className="h-4 w-4 mr-2" />
-                            Profile
-                        </Button>
+                    <div className="hidden sm:ml-6 sm:flex sm:items-center space-x-4">
+                        {user ? (
+                            <>
+                                {/* User Info */}
+                                <div className="flex items-center space-x-3">
+                                    <div className={`p-2 rounded-full ${getRoleColor(user.role)}`}>
+                                        {(() => {
+                                            const RoleIcon = getRoleIcon(user.role);
+                                            return <RoleIcon className="h-4 w-4" />;
+                                        })()}
+                                    </div>
+                                    <div className="text-sm">
+                                        <p className="font-medium text-gray-900">{user.name}</p>
+                                        <p className="text-gray-500 capitalize">{user.role}</p>
+                                    </div>
+                                </div>
+
+                                {/* Logout Button */}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleLogout}
+                                    className="text-red-600 border-red-200 hover:bg-red-50"
+                                >
+                                    <LogOut className="h-4 w-4 mr-2" />
+                                    Logout
+                                </Button>
+                            </>
+                        ) : (
+                            <Link href="/login">
+                                <Button variant="outline" size="sm">
+                                    <LogIn className="h-4 w-4 mr-2" />
+                                    Login
+                                </Button>
+                            </Link>
+                        )}
                     </div>
                 </div>
             </div>
