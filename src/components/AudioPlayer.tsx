@@ -17,7 +17,7 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
     const [currentPosition, setCurrentPosition] = useState(0);
     const [duration, setDuration] = useState(0);
     const [isSupported, setIsSupported] = useState(false);
-    
+
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
     const isStoppingRef = useRef(false);
@@ -111,14 +111,19 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
         utterance.onerror = (event: any) => {
             // Check if this is a real error or just a cancellation
             const errorType = event?.error || 'unknown';
-
-            // Don't log errors for normal cancellation (when user clicks stop)
-            if (errorType === 'canceled' || errorType === 'interrupted' || Object.keys(event).length === 0) {
-                console.log('Speech synthesis cancelled by user');
+            
+            // Don't log anything if we're intentionally stopping
+            if (isStoppingRef.current) {
+                // Reset the stopping flag
+                isStoppingRef.current = false;
+            } else if (errorType === 'canceled' || errorType === 'interrupted' || Object.keys(event).length === 0) {
+                // This is likely a normal cancellation, just log it quietly
+                console.log('Speech synthesis cancelled');
             } else {
+                // This is a real error
                 console.error('Speech synthesis error:', errorType, event);
             }
-
+            
             setIsPlaying(false);
             setIsPaused(false);
             setCurrentPosition(0);
