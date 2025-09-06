@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
-import Program from '@/models/Program';
+import Program, { IAsset } from '@/models/Program';
 
 // POST /api/programs/[id]/assets - Add asset to program
 export async function POST(
@@ -81,7 +81,7 @@ export async function DELETE(
         }
 
         program.assets = program.assets.filter(
-            (asset) => asset._id?.toString() !== assetId
+            (asset: IAsset) => asset._id?.toString() !== assetId
         );
 
         await program.save();

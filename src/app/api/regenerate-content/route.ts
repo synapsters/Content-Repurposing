@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
-import Program from '@/models/Program';
+import Program, { IAsset, IGeneratedContent } from '@/models/Program';
 import { aiGenerator } from '@/lib/ai-service';
 
 export async function POST(request: NextRequest) {
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Find the specific asset
-        const asset = program.assets.find(a => a._id?.toString() === assetId);
+        const asset = program.assets.find((a: IAsset) => a._id?.toString() === assetId);
         if (!asset || !asset.generatedContent) {
             return NextResponse.json(
                 { error: 'Asset or generated content not found' },
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
         // Find the existing content within the asset
         const existingContentIndex = asset.generatedContent.findIndex(
-            (content) => content._id?.toString() === contentId
+            (content: IGeneratedContent) => content._id?.toString() === contentId
         );
 
         if (existingContentIndex === -1) {

@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
 import YouTubeEmbed from '@/components/YouTubeEmbed';
 import ContentGenerator from '@/components/ContentGenerator';
+import { QuizQuestion, FlashCard } from '@/lib/ai-service';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -370,7 +371,7 @@ export default function ProgramDetailPage() {
                 const questionsToShow = isExpanded ? content.content : content.content.slice(0, 2);
                 return (
                     <div className="space-y-3">
-                        {questionsToShow.map((question: any, index: number) => (
+                        {questionsToShow.map((question: QuizQuestion, index: number) => (
                             <div key={index} className="bg-white rounded-lg p-4 border border-gray-200">
                                 <p className="font-medium text-sm mb-3 text-gray-900">{question.question}</p>
                                 <div className="space-y-2">
@@ -404,7 +405,7 @@ export default function ProgramDetailPage() {
                 const cardsToShow = isExpanded ? content.content : content.content.slice(0, 3);
                 return (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {cardsToShow.map((card: any, index: number) => (
+                        {cardsToShow.map((card: FlashCard, index: number) => (
                             <div key={index} className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border">
                                 <div className="space-y-2">
                                     <div>
