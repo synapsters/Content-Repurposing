@@ -100,15 +100,24 @@ export class AIContentGenerator {
         
         To maintain consistency and clarity, please use the following format for each question:
         
-        Return the response as a JSON array with this structure:
+        CRITICAL: Return ONLY a valid JSON array. No markdown, no explanations, no other text.
+        
+        Use this EXACT structure:
         [
             {
-            "question": "Question text",
-            "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
-            "correctAnswer": 0,
-            "explanation": "Explanation text"
+                "question": "Question text",
+                "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+                "correctAnswer": 0,
+                "explanation": "Explanation text"
             }
         ]
+        
+        JSON FORMATTING RULES:
+        - Use ONLY double quotes, never single quotes
+        - Escape quotes inside strings with backslash (\")
+        - correctAnswer must be a number (0-3)
+        - No trailing commas
+        - No comments in JSON
         
         **Explanation: ** A concise explanation for the correct answer.
 
@@ -123,15 +132,123 @@ export class AIContentGenerator {
 
         try {
             // Clean the response to extract JSON
-            const jsonMatch = response.match(/\[[\s\S]*\]/);
+            let cleanedResponse = response.trim();
+
+            // Remove markdown code blocks if present
+            cleanedResponse = cleanedResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+
+            // Find JSON array in the response
+            const jsonMatch = cleanedResponse.match(/\[[\s\S]*\]/);
             if (jsonMatch) {
-                return JSON.parse(jsonMatch[0]);
+                let jsonStr = jsonMatch[0];
+
+                // Fix common JSON issues
+                // Replace single quotes with double quotes (but not inside strings)
+                jsonStr = jsonStr.replace(/'/g, '"');
+
+                // Fix escaped quotes that might have been double-escaped
+                jsonStr = jsonStr.replace(/\\"/g, '\\"');
+
+                // Try to parse the cleaned JSON
+                try {
+                    return JSON.parse(jsonStr);
+                } catch (parseError) {
+                    console.error('JSON parse error, trying fallback:', parseError);
+                    console.error('Problematic JSON:', jsonStr.substring(0, 200) + '...');
+
+                    // Fallback: try to fix more complex quote issues
+                    jsonStr = this.fixJsonQuotes(jsonStr);
+                    return JSON.parse(jsonStr);
+                }
             }
-            throw new Error('Invalid JSON response');
+            throw new Error('No valid JSON array found in response');
         } catch (error) {
             console.error('Error parsing quiz JSON:', error);
-            throw new Error('Failed to generate quiz questions');
+            console.error('Raw response:', response.substring(0, 300) + '...');
+
+            // Return a fallback quiz if parsing fails
+            return this.getFallbackQuiz(language);
         }
+    }
+
+    private fixJsonQuotes(jsonStr: string): string {
+        // More sophisticated quote fixing
+        // This is a simple approach - in production, you might want a more robust JSON fixer
+        try {
+            // Replace problematic patterns
+            jsonStr = jsonStr
+                .replace(/([{,]\s*)(\w+):/g, '$1"$2":') // Fix unquoted keys
+                .replace(/:\s*'([^']*?)'/g, ': "$1"') // Fix single-quoted values
+                .replace(/:\s*"([^"]*?)"/g, (match, content) => {
+                    // Fix escaped quotes in content
+                    const fixedContent = content.replace(/"/g, '\\"');
+                    return `: "${fixedContent}"`;
+                });
+
+            return jsonStr;
+        } catch (error) {
+            console.error('Error fixing JSON quotes:', error);
+            return jsonStr;
+        }
+    }
+
+    private getFallbackQuiz(language: string): QuizQuestion[] {
+        const fallbackQuestions = {
+            en: [
+                {
+                    question: "What is the main topic of this content?",
+                    options: ["Programming", "Technology", "General Knowledge", "Other"],
+                    correctAnswer: 0,
+                    explanation: "This is a fallback question generated when the AI service encounters an error."
+                }
+            ],
+            fr: [
+                {
+                    question: "Quel est le sujet principal de ce contenu?",
+                    options: ["Programmation", "Technologie", "Connaissances générales", "Autre"],
+                    correctAnswer: 0,
+                    explanation: "Ceci est une question de secours générée lorsque le service IA rencontre une erreur."
+                }
+            ],
+            es: [
+                {
+                    question: "¿Cuál es el tema principal de este contenido?",
+                    options: ["Programación", "Tecnología", "Conocimiento general", "Otro"],
+                    correctAnswer: 0,
+                    explanation: "Esta es una pregunta de respaldo generada cuando el servicio de IA encuentra un error."
+                }
+            ]
+        };
+
+        return fallbackQuestions[language as keyof typeof fallbackQuestions] || fallbackQuestions.en;
+    }
+
+    private getFallbackFlashCards(language: string): FlashCard[] {
+        const fallbackCards = {
+            en: [
+                {
+                    front: "What is the main topic of this content?",
+                    back: "This is a fallback flashcard generated when the AI service encounters an error.",
+                    category: "General"
+                }
+            ],
+            fr: [
+                {
+                    front: "Quel est le sujet principal de ce contenu?",
+                    back: "Ceci est une carte de révision de secours générée lorsque le service IA rencontre une erreur.",
+                    category: "Général"
+                }
+            ],
+            es: [
+                {
+                    front: "¿Cuál es el tema principal de este contenido?",
+                    back: "Esta es una tarjeta de estudio de respaldo generada cuando el servicio de IA encuentra un error.",
+                    category: "General"
+                }
+            ]
+        };
+
+        return fallbackCards[language as keyof typeof fallbackCards] || fallbackCards.en;
     }
 
     async generateCaseStudy(content: string, language: string = 'en'): Promise<CaseStudy> {
@@ -248,7 +365,9 @@ export class AIContentGenerator {
       - Categorize cards by topic when possible
       - Make them useful for quick review and memorization
       
-      Return the response as a JSON array with this structure:
+      CRITICAL: Return ONLY a valid JSON array. No markdown, no explanations, no other text.
+      
+      Use this EXACT structure:
       [
         {
           "front": "Question or term",
@@ -256,20 +375,52 @@ export class AIContentGenerator {
           "category": "Topic category"
         }
       ]
+      
+      JSON FORMATTING RULES:
+      - Use ONLY double quotes, never single quotes
+      - Escape quotes inside strings with backslash (\")
+      - No trailing commas
+      - No comments in JSON
     `;
 
         const result = await this.model.generateContent(prompt);
         const response = result.response.text();
 
         try {
-            const jsonMatch = response.match(/\[[\s\S]*\]/);
+            // Clean the response to extract JSON
+            let cleanedResponse = response.trim();
+
+            // Remove markdown code blocks if present
+            cleanedResponse = cleanedResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+
+            // Find JSON array in the response
+            const jsonMatch = cleanedResponse.match(/\[[\s\S]*\]/);
             if (jsonMatch) {
-                return JSON.parse(jsonMatch[0]);
+                let jsonStr = jsonMatch[0];
+
+                // Fix common JSON issues
+                jsonStr = jsonStr.replace(/'/g, '"');
+                jsonStr = jsonStr.replace(/\\"/g, '\\"');
+
+                // Try to parse the cleaned JSON
+                try {
+                    return JSON.parse(jsonStr);
+                } catch (parseError) {
+                    console.error('JSON parse error, trying fallback:', parseError);
+                    console.error('Problematic JSON:', jsonStr.substring(0, 200) + '...');
+
+                    // Fallback: try to fix more complex quote issues
+                    jsonStr = this.fixJsonQuotes(jsonStr);
+                    return JSON.parse(jsonStr);
+                }
             }
-            throw new Error('Invalid JSON response');
+            throw new Error('No valid JSON array found in response');
         } catch (error) {
             console.error('Error parsing flashcards JSON:', error);
-            throw new Error('Failed to generate flashcards');
+            console.error('Raw response:', response.substring(0, 300) + '...');
+
+            // Return a fallback flashcard set if parsing fails
+            return this.getFallbackFlashCards(language);
         }
     }
 
