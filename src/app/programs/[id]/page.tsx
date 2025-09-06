@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
 import YouTubeEmbed from '@/components/YouTubeEmbed';
 import ContentGenerator from '@/components/ContentGenerator';
+import AudioPlayer from '@/components/AudioPlayer';
 import { QuizQuestion, FlashCard, CaseStudy } from '@/lib/ai-service';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +14,7 @@ import {
     Edit,
     FileText,
     Video,
+    Volume2,
     BookOpen,
     Globe,
     Calendar,
@@ -59,13 +61,13 @@ export default function ProgramDetailPage() {
                         return updatedAsset;
                     }
                 }
-                
+
                 // Fallback to first asset if no previous selection or asset not found
                 if (data.assets && data.assets.length > 0) {
                     console.log('🔄 Selecting first asset as default');
                     return data.assets[0];
                 }
-                
+
                 return null;
             });
 
@@ -100,11 +102,11 @@ export default function ProgramDetailPage() {
     const handleContentGenerated = async (newContent: IGeneratedContent) => {
         console.log('🔄 Content Generated:', newContent);
         setGeneratingContent(false); // End generation state
-        
+
         // Fetch the updated program data to get the latest state
         console.log('🔄 Fetching updated program data after generation...');
         await fetchProgram();
-        
+
         console.log('✅ Program data refreshed after generation');
     };
 
@@ -155,7 +157,7 @@ export default function ProgramDetailPage() {
                 // Fetch the updated program data to get the latest state
                 console.log('🔄 Fetching updated program data after regeneration...');
                 await fetchProgram();
-                
+
                 console.log('✅ Program data refreshed after regeneration');
             } else {
                 console.error('❌ Regeneration failed:', response.status, response.statusText);
@@ -214,15 +216,15 @@ export default function ProgramDetailPage() {
     // Helper function to get only the latest version for each content type and language
     const getLatestVersions = (contents: IGeneratedContent[], language?: string, contentType?: string) => {
         let filteredContent = contents.filter(content => content.status === 'published');
-        
+
         if (language) {
             filteredContent = filteredContent.filter(content => content.language === language);
         }
-        
+
         if (contentType) {
             filteredContent = filteredContent.filter(content => content.type === contentType);
         }
-        
+
         // Group by content type and language combination
         const groupedByTypeAndLang = filteredContent.reduce((acc, content) => {
             const key = `${content.type}-${content.language}`;
@@ -232,7 +234,7 @@ export default function ProgramDetailPage() {
             acc[key].push(content);
             return acc;
         }, {} as Record<string, IGeneratedContent[]>);
-        
+
         // Get the latest version for each type-language combination
         const latestVersions: IGeneratedContent[] = [];
         Object.keys(groupedByTypeAndLang).forEach(key => {
@@ -242,7 +244,7 @@ export default function ProgramDetailPage() {
             });
             latestVersions.push(latest);
         });
-        
+
         return latestVersions;
     };
 
@@ -369,6 +371,39 @@ export default function ProgramDetailPage() {
                                 </ul>
                             </div>
                         )}
+                    </div>
+                );
+            } else if (content.type === 'audio_track' && typeof content.content === 'string') {
+                const audioScript = content.content;
+                return (
+                    <div className="space-y-4">
+                        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-200">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center">
+                                    <Volume2 className="h-5 w-5 text-indigo-600 mr-2" />
+                                    <h4 className="font-semibold text-indigo-800">Audio Narration Script</h4>
+                                </div>
+                                <AudioPlayer
+                                    text={audioScript}
+                                    language={content.language}
+                                    className="flex-shrink-0"
+                                />
+                            </div>
+                            <div className="bg-white rounded-lg p-4 border border-indigo-100">
+                                <pre className="whitespace-pre-wrap text-gray-700 text-sm font-mono leading-relaxed">
+                                    {isExpanded ? audioScript : `${audioScript.substring(0, 500)}${audioScript.length > 500 ? '...' : ''}`}
+                                </pre>
+                            </div>
+                            <div className="mt-3 flex items-center justify-between">
+                                <div className="flex items-center text-xs text-indigo-600">
+                                    <span className="mr-2">🎵</span>
+                                    <span>Click play button to listen to narration</span>
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                    Text-to-Speech Ready
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 );
             } else {
@@ -719,7 +754,8 @@ export default function ProgramDetailPage() {
                                         { type: 'quiz', icon: '🧠', label: 'Quiz', gradient: 'from-green-500 to-green-600' },
                                         { type: 'flashcard', icon: '📚', label: 'Flashcards', gradient: 'from-purple-500 to-purple-600' },
                                         { type: 'case_study', icon: '📋', label: 'Case Study', gradient: 'from-orange-500 to-orange-600' },
-                                        { type: 'short_lecture', icon: '🎓', label: 'Short Lecture', gradient: 'from-teal-500 to-teal-600' }
+                                        { type: 'short_lecture', icon: '🎓', label: 'Short Lecture', gradient: 'from-teal-500 to-teal-600' },
+                                        { type: 'audio_track', icon: '🎵', label: 'Audio Track', gradient: 'from-indigo-500 to-indigo-600' }
                                     ].map(({ type, icon, label, gradient }) => {
                                         const existingContent = getLatestVersions(selectedAsset.generatedContent || [], undefined, type);
 

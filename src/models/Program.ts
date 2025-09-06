@@ -16,7 +16,7 @@ export interface IAsset {
 
 export interface IGeneratedContent {
     _id?: string;
-    type: 'summary' | 'quiz' | 'case_study' | 'short_lecture' | 'flashcard';
+    type: 'summary' | 'quiz' | 'case_study' | 'short_lecture' | 'flashcard' | 'audio_track';
     title: string;
     content: string | QuizQuestion[] | FlashCard[] | CaseStudy; // Flexible content structure based on type
     language: string;
@@ -41,7 +41,7 @@ export interface IProgram extends Document {
 const GeneratedContentSchema = new Schema<IGeneratedContent>({
     type: {
         type: String,
-        enum: ['summary', 'quiz', 'case_study', 'short_lecture', 'flashcard'],
+        enum: ['summary', 'quiz', 'case_study', 'short_lecture', 'flashcard', 'audio_track'],
         required: true
     },
     title: {

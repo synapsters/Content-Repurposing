@@ -4,7 +4,7 @@ import { youtubeService } from './youtube-service';
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
 
 export interface ContentGenerationRequest {
-    type: 'summary' | 'quiz' | 'case_study' | 'short_lecture' | 'flashcard';
+    type: 'summary' | 'quiz' | 'case_study' | 'short_lecture' | 'flashcard' | 'audio_track';
     sourceContent: string;
     language: string;
     additionalContext?: string;
@@ -192,6 +192,31 @@ export class AIContentGenerator {
         }
     }
 
+    async generateAudioTrack(content: string, language: string = 'en'): Promise<string> {
+        const prompt = `
+      Create an engaging audio narration script for the following content in ${language}:
+      
+      Content: ${content}
+      
+      Requirements:
+      - Write a natural, conversational narration script suitable for text-to-speech
+      - Include appropriate pauses marked with [PAUSE]
+      - Add emphasis markers like [EMPHASIS] for important points
+      - Structure it with clear introduction, main content, and conclusion
+      - Keep sentences at moderate length for clear pronunciation
+      - Add breathing spaces and natural flow
+      - Include tone guidance like [FRIENDLY TONE] or [SERIOUS TONE] where appropriate
+      - Make it engaging and educational
+      - Duration should be approximately 3-5 minutes when narrated
+      - If this is video content, create narration that complements the visual elements
+      
+      Format the response as a clean narration script with timing and tone markers.
+      `;
+
+        const result = await this.model.generateContent(prompt);
+        return result.response.text();
+    }
+
     async generateContent(request: ContentGenerationRequest): Promise<string | QuizQuestion[] | FlashCard[] | CaseStudy> {
         const { type, sourceContent, language, additionalContext } = request;
 
@@ -244,6 +269,9 @@ export class AIContentGenerator {
 
             case 'flashcard':
                 return await this.generateFlashCards(contextualContent, language);
+
+            case 'audio_track':
+                return await this.generateAudioTrack(contextualContent, language);
 
             default:
                 throw new Error(`Unsupported content type: ${type}`);

@@ -7,6 +7,7 @@ import {
     BookOpen,
     Video,
     CreditCard,
+    Volume2,
     Loader2,
     RefreshCw,
     CheckCircle
@@ -60,6 +61,13 @@ const contentTypes = [
         description: 'Generate flashcards for quick review',
         icon: CreditCard,
         color: 'bg-pink-500'
+    },
+    {
+        type: 'audio_track' as const,
+        title: 'Create Audio Track',
+        description: 'Generate audio narration script',
+        icon: Volume2,
+        color: 'bg-indigo-500'
     }
 ];
 
