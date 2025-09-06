@@ -11,9 +11,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import {
     ArrowLeft,
     Edit,
-    Share,
-    Settings,
-    Play,
     FileText,
     Video,
     BookOpen,
@@ -23,7 +20,6 @@ import {
     Eye,
     EyeOff,
     Sparkles,
-    Download,
     ChevronDown,
     ChevronUp,
     Copy,
@@ -38,7 +34,6 @@ export default function ProgramDetailPage() {
     const [program, setProgram] = useState<IProgram | null>(null);
     const [loading, setLoading] = useState(true);
     const [selectedAsset, setSelectedAsset] = useState<IAsset | null>(null);
-    const [activeTab, setActiveTab] = useState<string>('summary');
     const [expandedContent, setExpandedContent] = useState<Set<string>>(new Set());
     const [selectedLanguage, setSelectedLanguage] = useState<string>('en');
     const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
