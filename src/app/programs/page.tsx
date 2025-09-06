@@ -18,7 +18,7 @@ import {
     Edit,
     Eye
 } from 'lucide-react';
-import { IProgram } from '@/models/Program';
+import { IProgram, IGeneratedContent } from '@/models/Program';
 import { getLanguageFlag } from '@/lib/utils';
 
 export default function ProgramsPage() {

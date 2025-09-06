@@ -85,7 +85,7 @@ export default function TestHindiTTSPage() {
                         <div>
                             <h4 className="font-semibold mb-2">1. Run Diagnostic</h4>
                             <p className="text-gray-600">
-                                Click "Run Diagnostic" to check your system's Hindi TTS capabilities.
+                                Click &quot;Run Diagnostic&quot; to check your system&apos;s Hindi TTS capabilities.
                             </p>
                         </div>
 

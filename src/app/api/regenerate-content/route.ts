@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
                 content.type === contentType &&
                 content.language === (language || 'en')
         );
-        const maxVersion = Math.max(...sameTypeAndLanguageContent.map(c => c.version || 1));
+        const maxVersion = Math.max(...sameTypeAndLanguageContent.map((c: IGeneratedContent) => c.version || 1));
 
         // Create new version of the content
         const newContent: IGeneratedContent = {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
-import Program, { IAsset } from '@/models/Program';
+import Program, { IAsset, IGeneratedContent } from '@/models/Program';
 import { aiGenerator } from '@/lib/ai-service';
 
 export async function POST(request: NextRequest) {
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
                 content.type === contentType &&
                 content.language === (language || 'en')
         ) || [];
-        const maxVersion = existingContent.length > 0 ? Math.max(...existingContent.map(c => c.version || 1)) : 0;
+        const maxVersion = existingContent.length > 0 ? Math.max(...existingContent.map((c: IGeneratedContent) => c.version || 1)) : 0;
 
         // Create the new generated content object
         const newContent = {

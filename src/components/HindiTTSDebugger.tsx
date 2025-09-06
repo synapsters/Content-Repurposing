@@ -23,10 +23,10 @@ export default function HindiTTSDebugger() {
         const results = {
             browserSupport: false,
             voicesLoaded: false,
-            hindiVoicesFound: [],
-            allVoices: [],
+            hindiVoicesFound: [] as Array<{ name: string; lang: string; localService: boolean }>,
+            allVoices: [] as Array<{ name: string; lang: string; localService: boolean }>,
             testPassed: false,
-            errors: []
+            errors: [] as string[]
         };
 
         try {
