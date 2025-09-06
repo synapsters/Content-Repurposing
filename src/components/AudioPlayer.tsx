@@ -111,7 +111,7 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
         utterance.onerror = (event: any) => {
             // Check if this is a real error or just a cancellation
             const errorType = event?.error || 'unknown';
-            
+
             // Don't log anything if we're intentionally stopping
             if (isStoppingRef.current) {
                 // Reset the stopping flag
@@ -123,7 +123,7 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
                 // This is a real error
                 console.error('Speech synthesis error:', errorType, event);
             }
-            
+
             setIsPlaying(false);
             setIsPaused(false);
             setCurrentPosition(0);
@@ -178,6 +178,9 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
     };
 
     const handleStop = () => {
+        // Set flag to indicate we're intentionally stopping
+        isStoppingRef.current = true;
+
         try {
             speechSynthesis.cancel();
         } catch (error) {
@@ -209,6 +212,9 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
     // Cleanup on unmount
     useEffect(() => {
         return () => {
+            // Set flag to indicate we're cleaning up
+            isStoppingRef.current = true;
+
             try {
                 speechSynthesis.cancel();
             } catch (error) {
