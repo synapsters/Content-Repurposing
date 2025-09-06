@@ -28,6 +28,21 @@ export default function ProgramsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
 
+    // Helper function to get latest versions count only
+    const getLatestVersionsCount = (contents: any[]) => {
+        const publishedContent = contents.filter(content => content.status === 'published');
+        const groupedByTypeAndLang = publishedContent.reduce((acc, content) => {
+            const key = `${content.type}-${content.language}`;
+            if (!acc[key]) {
+                acc[key] = [];
+            }
+            acc[key].push(content);
+            return acc;
+        }, {} as Record<string, any[]>);
+
+        return Object.keys(groupedByTypeAndLang).length; // Count unique type-language combinations
+    };
+
     const fetchPrograms = useCallback(async () => {
         try {
             setLoading(true);
@@ -191,7 +206,7 @@ export default function ProgramsPage() {
                                                     </span>
                                                     <span className="flex items-center">
                                                         <FileText className="h-4 w-4 mr-1" />
-                                                        {program.assets?.reduce((acc, asset) => acc + (asset.generatedContent?.filter(content => content.status === 'published').length || 0), 0) || 0} generated
+                                                        {program.assets?.reduce((acc, asset) => acc + getLatestVersionsCount(asset.generatedContent || []), 0) || 0} generated
                                                     </span>
                                                 </div>
                                             </div>

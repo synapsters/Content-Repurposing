@@ -98,24 +98,9 @@ export default function ProgramDetailPage() {
                 if (asset._id === selectedAsset._id) {
                     console.log('🎯 Found matching asset for content generation');
 
-                    // Check if content of same type and language already exists for this asset
-                    const existingContentIndex = asset.generatedContent?.findIndex(
-                        content =>
-                            content.type === newContent.type &&
-                            content.language === newContent.language
-                    ) ?? -1;
-
-                    let updatedGeneratedContent;
-                    if (existingContentIndex >= 0) {
-                        console.log('✏️ Overwriting existing content at index:', existingContentIndex);
-                        // Overwrite existing content
-                        updatedGeneratedContent = [...(asset.generatedContent || [])];
-                        updatedGeneratedContent[existingContentIndex] = newContent;
-                    } else {
-                        console.log('➕ Adding new content to asset');
-                        // Add new content
-                        updatedGeneratedContent = [...(asset.generatedContent || []), newContent];
-                    }
+                    // Always add new content (versioning system - don't overwrite)
+                    console.log('➕ Adding new content to asset (versioning system)');
+                    const updatedGeneratedContent = [...(asset.generatedContent || []), newContent];
 
                     console.log('🔍 Updated content count:', {
                         before: asset.generatedContent?.length || 0,
@@ -339,6 +324,41 @@ export default function ProgramDetailPage() {
         }
     };
 
+
+    // Helper function to get only the latest version for each content type and language
+    const getLatestVersions = (contents: IGeneratedContent[], language?: string, contentType?: string) => {
+        let filteredContent = contents.filter(content => content.status === 'published');
+        
+        if (language) {
+            filteredContent = filteredContent.filter(content => content.language === language);
+        }
+        
+        if (contentType) {
+            filteredContent = filteredContent.filter(content => content.type === contentType);
+        }
+        
+        // Group by content type and language combination
+        const groupedByTypeAndLang = filteredContent.reduce((acc, content) => {
+            const key = `${content.type}-${content.language}`;
+            if (!acc[key]) {
+                acc[key] = [];
+            }
+            acc[key].push(content);
+            return acc;
+        }, {} as Record<string, IGeneratedContent[]>);
+        
+        // Get the latest version for each type-language combination
+        const latestVersions: IGeneratedContent[] = [];
+        Object.keys(groupedByTypeAndLang).forEach(key => {
+            const contentForKey = groupedByTypeAndLang[key];
+            const latest = contentForKey.reduce((latest, current) => {
+                return (current.version || 1) > (latest.version || 1) ? current : latest;
+            });
+            latestVersions.push(latest);
+        });
+        
+        return latestVersions;
+    };
 
     const renderGeneratedContent = (content: IGeneratedContent) => {
         const isExpanded = expandedContent.has(content._id || '');
@@ -815,9 +835,7 @@ export default function ProgramDetailPage() {
                                         { type: 'case_study', icon: '📋', label: 'Case Study', gradient: 'from-orange-500 to-orange-600' },
                                         { type: 'short_lecture', icon: '🎓', label: 'Short Lecture', gradient: 'from-teal-500 to-teal-600' }
                                     ].map(({ type, icon, label, gradient }) => {
-                                        const existingContent = selectedAsset.generatedContent?.filter(
-                                            content => content.type === type && content.status === 'published'
-                                        ) || [];
+                                        const existingContent = getLatestVersions(selectedAsset.generatedContent || [], undefined, type);
 
                                         return (
                                             <div key={`generation-type-${type}`} className="group">
@@ -919,9 +937,7 @@ export default function ProgramDetailPage() {
                                                         <span className="text-sm font-medium text-gray-700">{getLanguageName(language)}</span>
                                                     </div>
                                                     <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full font-medium">
-                                                        {selectedAsset.generatedContent?.filter(
-                                                            content => content.language === language && content.status === 'published'
-                                                        ).length || 0}
+                                                        {getLatestVersions(selectedAsset.generatedContent || [], language).length}
                                                     </span>
                                                 </div>
                                             ))}
@@ -970,9 +986,7 @@ export default function ProgramDetailPage() {
                                             <div className="border-b border-gray-200 mb-6">
                                                 <nav className="-mb-px flex flex-wrap gap-2">
                                                     {(program.supportedLanguages || ['en']).map(language => {
-                                                        const languageContent = selectedAsset.generatedContent?.filter(
-                                                            content => content.language === language && content.status === 'published'
-                                                        ) || [];
+                                                        const languageContent = getLatestVersions(selectedAsset.generatedContent || [], language);
 
                                                         if (languageContent.length === 0) return null;
 
@@ -998,10 +1012,7 @@ export default function ProgramDetailPage() {
 
                                             {/* Generated Content for Selected Language */}
                                             <div className="space-y-6">
-                                                {selectedAsset.generatedContent
-                                                    ?.filter(content =>
-                                                        content.language === selectedLanguage && content.status === 'published'
-                                                    )
+                                                {getLatestVersions(selectedAsset.generatedContent || [], selectedLanguage)
                                                     .map((content) => (
                                                         <div key={`${content._id}-${content.generatedAt}-${refreshTrigger}`} className="w-full">
                                                             {renderGeneratedContent(content)}

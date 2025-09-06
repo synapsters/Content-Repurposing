@@ -51,9 +51,24 @@ export default function Dashboard() {
       // Calculate stats
       const totalAssets = data.programs?.reduce((acc: number, program: IProgram) =>
         acc + (program.assets?.length || 0), 0) || 0;
+      // Helper function to get latest versions only
+      const getLatestVersionsCount = (contents: any[]) => {
+        const publishedContent = contents.filter(content => content.status === 'published');
+        const groupedByTypeAndLang = publishedContent.reduce((acc, content) => {
+          const key = `${content.type}-${content.language}`;
+          if (!acc[key]) {
+            acc[key] = [];
+          }
+          acc[key].push(content);
+          return acc;
+        }, {} as Record<string, any[]>);
+
+        return Object.keys(groupedByTypeAndLang).length; // Count unique type-language combinations
+      };
+
       const totalGeneratedContent = data.programs?.reduce((acc: number, program: IProgram) => {
         const contentCount = program.assets?.reduce((assetAcc: number, asset) =>
-          assetAcc + (asset.generatedContent?.filter(content => content.status === 'published').length || 0), 0) || 0;
+          assetAcc + getLatestVersionsCount(asset.generatedContent || []), 0) || 0;
         return acc + contentCount;
       }, 0) || 0;
       const publishedPrograms = data.programs?.filter((program: IProgram) =>
@@ -192,7 +207,7 @@ export default function Dashboard() {
                             {program.assets?.length || 0} assets
                           </span>
                           <span className="text-xs text-gray-500">
-                            {program.assets?.reduce((acc, asset) => acc + (asset.generatedContent?.filter(content => content.status === 'published').length || 0), 0) || 0} generated
+                            {program.assets?.reduce((acc, asset) => acc + getLatestVersionsCount(asset.generatedContent || []), 0) || 0} generated
                           </span>
                           {program.isPublished && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">

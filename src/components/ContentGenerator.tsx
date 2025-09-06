@@ -230,8 +230,39 @@ export default function ContentGenerator({
         });
     };
 
+    // Helper function to get only the latest version for each content type and language
+    const getLatestVersions = (contents: IGeneratedContent[], contentType?: string) => {
+        let filteredContent = contents.filter(content => content.status === 'published');
+
+        if (contentType) {
+            filteredContent = filteredContent.filter(content => content.type === contentType);
+        }
+
+        // Group by content type and language combination
+        const groupedByTypeAndLang = filteredContent.reduce((acc, content) => {
+            const key = `${content.type}-${content.language}`;
+            if (!acc[key]) {
+                acc[key] = [];
+            }
+            acc[key].push(content);
+            return acc;
+        }, {} as Record<string, IGeneratedContent[]>);
+
+        // Get the latest version for each type-language combination
+        const latestVersions: IGeneratedContent[] = [];
+        Object.keys(groupedByTypeAndLang).forEach(key => {
+            const contentForKey = groupedByTypeAndLang[key];
+            const latest = contentForKey.reduce((latest, current) => {
+                return (current.version || 1) > (latest.version || 1) ? current : latest;
+            });
+            latestVersions.push(latest);
+        });
+
+        return latestVersions;
+    };
+
     const getExistingContentForType = (type: string) => {
-        return existingContent.filter(content => content.type === type && content.status === 'published');
+        return getLatestVersions(existingContent, type);
     };
 
     const isGenerating = (type: string) => {
