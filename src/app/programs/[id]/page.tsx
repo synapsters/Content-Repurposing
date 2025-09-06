@@ -49,13 +49,28 @@ export default function ProgramDetailPage() {
             const data = await response.json();
             setProgram(data);
 
-            // Select first asset by default
-            if (data.assets && data.assets.length > 0) {
-                setSelectedAsset(data.assets[0]);
-            }
+            // Preserve currently selected asset if it exists, otherwise select first
+            setSelectedAsset(prevSelected => {
+                if (prevSelected && data.assets) {
+                    // Find the updated version of the currently selected asset
+                    const updatedAsset = data.assets.find((asset: any) => asset._id === prevSelected._id);
+                    if (updatedAsset) {
+                        console.log('🔄 Preserving selected asset with updated data');
+                        return updatedAsset;
+                    }
+                }
+                
+                // Fallback to first asset if no previous selection or asset not found
+                if (data.assets && data.assets.length > 0) {
+                    console.log('🔄 Selecting first asset as default');
+                    return data.assets[0];
+                }
+                
+                return null;
+            });
 
-            // Set first supported language as default
-            if (data.supportedLanguages && data.supportedLanguages.length > 0) {
+            // Set first supported language as default only if no language is selected
+            if (!selectedLanguage && data.supportedLanguages && data.supportedLanguages.length > 0) {
                 setSelectedLanguage(data.supportedLanguages[0]);
             }
         } catch (error) {
@@ -64,7 +79,7 @@ export default function ProgramDetailPage() {
         } finally {
             setLoading(false);
         }
-    }, [params.id, router]);
+    }, [params.id, router, selectedLanguage]);
 
     useEffect(() => {
         if (params.id) {
@@ -82,76 +97,15 @@ export default function ProgramDetailPage() {
         setGeneratingContent(false);
     };
 
-    const handleContentGenerated = (newContent: IGeneratedContent) => {
+    const handleContentGenerated = async (newContent: IGeneratedContent) => {
         console.log('🔄 Content Generated:', newContent);
         setGeneratingContent(false); // End generation state
-        console.log('🔍 Current selectedAsset before update:', selectedAsset?._id);
-        console.log('🔍 New content details:', {
-            type: newContent.type,
-            language: newContent.language,
-            hasId: !!newContent._id
-        });
-
-        if (program && selectedAsset) {
-            // Find the asset and update its generated content
-            const updatedAssets = program.assets.map(asset => {
-                if (asset._id === selectedAsset._id) {
-                    console.log('🎯 Found matching asset for content generation');
-
-                    // Always add new content (versioning system - don't overwrite)
-                    console.log('➕ Adding new content to asset (versioning system)');
-                    const updatedGeneratedContent = [...(asset.generatedContent || []), newContent];
-
-                    console.log('🔍 Updated content count:', {
-                        before: asset.generatedContent?.length || 0,
-                        after: updatedGeneratedContent.length
-                    });
-
-                    const updatedAsset = {
-                        ...asset,
-                        generatedContent: updatedGeneratedContent
-                    };
-
-                    return updatedAsset;
-                }
-                return asset;
-            });
-
-            console.log('🔄 Updating program state with new content');
-
-            // Use functional updates for more reliable state management
-            setProgram(prevProgram => {
-                if (!prevProgram) return prevProgram;
-                return {
-                    ...prevProgram,
-                    assets: updatedAssets
-                } as IProgram;
-            });
-
-            // Update selectedAsset with functional update too
-            setSelectedAsset(prevAsset => {
-                if (!prevAsset) return prevAsset;
-                const updatedAsset = updatedAssets.find(a => a._id === prevAsset._id);
-                console.log('🔄 Updated selectedAsset with new content count:', updatedAsset?.generatedContent?.length || 0);
-                return updatedAsset || prevAsset;
-            });
-
-            // Multiple refresh triggers for maximum reliability
-            const newRefreshTrigger = Date.now();
-            console.log('🔄 Setting refresh trigger for new content:', newRefreshTrigger);
-            setRefreshTrigger(newRefreshTrigger);
-
-            // Additional state updates for reliability
-            setTimeout(() => {
-                console.log('🔄 Secondary state update for new content reliability');
-                setRefreshTrigger(Date.now());
-            }, 50);
-
-            setTimeout(() => {
-                console.log('🔄 Tertiary state update for maximum new content reliability');
-                setRefreshTrigger(Date.now());
-            }, 150);
-        }
+        
+        // Fetch the updated program data to get the latest state
+        console.log('🔄 Fetching updated program data after generation...');
+        await fetchProgram();
+        
+        console.log('✅ Program data refreshed after generation');
     };
 
     const toggleContentExpansion = (contentId: string) => {
@@ -198,79 +152,11 @@ export default function ProgramDetailPage() {
                 console.log('🔍 Current selectedAsset before update:', selectedAsset._id);
                 console.log('🔍 Content ID being updated:', contentId);
 
-                if (program && selectedAsset) {
-                    // Update the existing content within the selected asset
-                    const updatedAssets = program.assets.map(asset => {
-                        if (asset._id === selectedAsset._id) {
-                            console.log('🎯 Found matching asset, updating content...');
-                            const updatedGeneratedContent = asset.generatedContent?.map(c => {
-                                // Try both string comparison and object comparison
-                                const cId = c._id?.toString();
-                                const targetId = contentId?.toString();
-
-                                if (cId === targetId) {
-                                    console.log('✅ Found content to update:', c._id, '→', updatedContent._id);
-                                    return { ...updatedContent, _id: c._id }; // Preserve original _id
-                                }
-                                return c;
-                            }) || [];
-
-                            console.log('🔍 Content update mapping:', {
-                                originalCount: asset.generatedContent?.length || 0,
-                                updatedCount: updatedGeneratedContent.length,
-                                targetContentId: contentId,
-                                foundMatch: updatedGeneratedContent.some(c => c._id?.toString() === contentId?.toString())
-                            });
-
-                            const updatedAsset = {
-                                ...asset,
-                                generatedContent: updatedGeneratedContent
-                            };
-
-                            console.log('🔄 Updated asset generated content count:', updatedGeneratedContent.length);
-
-                            // Also update the selectedAsset state to reflect changes immediately
-                            setSelectedAsset(updatedAsset);
-
-                            return updatedAsset;
-                        }
-                        return asset;
-                    });
-
-                    console.log('🔄 Updating program state with regenerated content');
-
-                    // Use functional updates for more reliable state management
-                    setProgram(prevProgram => {
-                        if (!prevProgram) return prevProgram;
-                        return {
-                            ...prevProgram,
-                            assets: updatedAssets
-                        } as IProgram;
-                    });
-
-                    // Update selectedAsset with functional update too
-                    setSelectedAsset(prevAsset => {
-                        if (!prevAsset) return prevAsset;
-                        const updatedAsset = updatedAssets.find(a => a._id === prevAsset._id);
-                        return updatedAsset || prevAsset;
-                    });
-
-                    // Force re-render with timestamp for uniqueness
-                    const newRefreshTrigger = Date.now();
-                    console.log('🔄 Setting refresh trigger:', newRefreshTrigger);
-                    setRefreshTrigger(newRefreshTrigger);
-
-                    // Multiple state updates for reliability
-                    setTimeout(() => {
-                        console.log('🔄 Secondary state update for reliability');
-                        setRefreshTrigger(Date.now());
-                    }, 50);
-
-                    setTimeout(() => {
-                        console.log('🔄 Tertiary state update for maximum reliability');
-                        setRefreshTrigger(Date.now());
-                    }, 150);
-                }
+                // Fetch the updated program data to get the latest state
+                console.log('🔄 Fetching updated program data after regeneration...');
+                await fetchProgram();
+                
+                console.log('✅ Program data refreshed after regeneration');
             } else {
                 console.error('❌ Regeneration failed:', response.status, response.statusText);
                 const errorData = await response.json().catch(() => ({}));
