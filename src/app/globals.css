@@ -117,6 +117,11 @@ body {
   -webkit-line-clamp: 4;
 }
 
+/* Custom hover animations */
+.hover\:scale-102:hover {
+  transform: scale(1.02);
+}
+
 /* Video player slider styles */
 .slider {
   background: linear-gradient(to right, #3b82f6 0%, #3b82f6 var(--value, 0%), #6b7280 var(--value, 0%), #6b7280 100%);

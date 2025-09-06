@@ -18,6 +18,37 @@ import {
 } from 'lucide-react';
 import { IProgram } from '@/models/Program';
 import { getUser } from '@/lib/auth';
+import { IGeneratedContent } from '@/models/Program';
+
+// Helper function to count latest versions of generated content
+const getLatestVersionsCount = (generatedContent: IGeneratedContent[]): number => {
+  if (!generatedContent || generatedContent.length === 0) {
+    return 0;
+  }
+
+  // Group by content type and language combination
+  const groupedByTypeAndLang = generatedContent
+    .filter(content => content.status === 'published')
+    .reduce((acc, content) => {
+      const key = `${content.type}-${content.language}`;
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(content);
+      return acc;
+    }, {} as Record<string, IGeneratedContent[]>);
+
+  // Count the latest version for each type-language combination
+  let count = 0;
+  Object.keys(groupedByTypeAndLang).forEach(key => {
+    const contentForKey = groupedByTypeAndLang[key];
+    if (contentForKey.length > 0) {
+      count += 1; // Count one latest version per type-language combination
+    }
+  });
+
+  return count;
+};
 
 export default function Dashboard() {
   const router = useRouter();
@@ -193,20 +224,20 @@ export default function Dashboard() {
                   {programs.slice(0, 5).map((program) => (
                     <div
                       key={program._id as string}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                      className="flex items-start justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-4"
                     >
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-900 break-words line-clamp-2">
                           {program.title}
                         </h4>
-                        <p className="text-sm text-gray-600 truncate">
+                        <p className="text-sm text-gray-600 break-words line-clamp-2 mt-1">
                           {program.description}
                         </p>
-                        <div className="flex items-center space-x-4 mt-2">
-                          <span className="text-xs text-gray-500">
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                          <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full">
                             {program.assets?.length || 0} assets
                           </span>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full">
                             {program.assets?.reduce((acc, asset) => acc + getLatestVersionsCount(asset.generatedContent || []), 0) || 0} generated
                           </span>
                           {program.isPublished && (

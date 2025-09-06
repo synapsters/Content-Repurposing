@@ -294,9 +294,9 @@ export default function ContentGenerator({
                         <button
                             key={language.code}
                             onClick={() => toggleLanguage(language.code)}
-                            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${selectedLanguages.includes(language.code)
-                                ? 'bg-white text-gray-700 shadow-sm'
-                                : 'bg-white/50 text-gray-300 hover:bg-white/70'
+                            className={`px-3 py-1 rounded-full text-xs font-medium transition-all duration-200 border cursor-pointer hover:scale-105 ${selectedLanguages.includes(language.code)
+                                ? 'bg-white text-gray-700 shadow-md border-gray-300 hover:shadow-lg'
+                                : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border-gray-200 hover:shadow-sm'
                                 }`}
                         >
                             <span className="mr-1">{language.flag}</span>
@@ -305,10 +305,10 @@ export default function ContentGenerator({
                     ))}
                 </div>
                 <div className="flex justify-between items-center text-xs">
-                    <span className="text-white/70">
+                    <span className="text-gray-600">
                         {selectedLanguages.length} language{selectedLanguages.length !== 1 ? 's' : ''} selected
                         {selectedLanguages.length > 0 && (
-                            <span className="ml-2 text-white/50">
+                            <span className="ml-2 text-gray-500">
                                 ({selectedLanguages.join(', ')})
                             </span>
                         )}
@@ -358,7 +358,7 @@ export default function ContentGenerator({
                                     handleGenerate(contentTypeItem.type);
                                 }}
                                 disabled={isCurrentlyGenerating || selectedLanguages.length === 0}
-                                className="w-full bg-white/20 hover:bg-white/30 disabled:bg-white/10 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
+                                className="w-full bg-white hover:bg-gray-50 disabled:bg-gray-100 text-gray-700 disabled:text-gray-400 font-medium py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 border border-gray-200 shadow-sm hover:shadow-lg hover:scale-105 hover:-translate-y-0.5 cursor-pointer disabled:cursor-not-allowed disabled:transform-none"
                             >
                                 {isCurrentlyGenerating ? (
                                     <>
@@ -390,9 +390,9 @@ export default function ContentGenerator({
                                     {existingForType.map((content, index) => (
                                         <div
                                             key={content._id || `existing-content-${content.type}-${content.language}-${index}`}
-                                            className="flex items-center justify-between bg-white/10 rounded-lg p-2"
+                                            className="flex items-center justify-between bg-gray-100 border border-gray-200 rounded-lg p-2"
                                         >
-                                            <div className="flex items-center space-x-2 text-white text-sm">
+                                            <div className="flex items-center space-x-2 text-gray-700 text-sm">
                                                 <span>{getLanguageFlag(content.language)}</span>
                                                 <span>{getLanguageName(content.language)}</span>
                                                 {content.isPublished && (
@@ -406,7 +406,7 @@ export default function ContentGenerator({
                                                     content.language
                                                 )}
                                                 disabled={generating === `${content.type}-${content.language}`}
-                                                className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded text-xs font-medium transition-colors flex items-center space-x-1"
+                                                className="bg-white hover:bg-gray-50 text-gray-600 hover:text-gray-700 px-3 py-1 rounded text-xs font-medium transition-all duration-200 flex items-center space-x-1 border border-gray-300 shadow-sm hover:shadow-md hover:scale-105 cursor-pointer disabled:cursor-not-allowed disabled:transform-none"
                                             >
                                                 {generating === `${content.type}-${content.language}` ? (
                                                     <Loader2 className="h-3 w-3 animate-spin" />

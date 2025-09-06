@@ -820,17 +820,17 @@ export default function ProgramDetailPage() {
                                                     <div
                                                         key={asset._id || `asset-${index}`}
                                                         onClick={() => setSelectedAsset(asset)}
-                                                        className={`group p-4 rounded-xl cursor-pointer transition-all duration-300 ${isSelected
-                                                            ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 shadow-md'
-                                                            : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent hover:border-gray-200'
+                                                        className={`group p-4 rounded-xl cursor-pointer transition-all duration-300 hover:scale-102 hover:-translate-y-0.5 ${isSelected
+                                                            ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 shadow-md hover:shadow-lg'
+                                                            : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent hover:border-gray-200 hover:shadow-sm'
                                                             }`}
                                                     >
                                                         <div className="flex items-center space-x-4">
-                                                            <div className={`p-3 rounded-lg transition-colors ${isSelected
+                                                            <div className={`p-3 rounded-lg transition-all duration-300 ${isSelected
                                                                 ? 'bg-blue-100 text-blue-600'
                                                                 : 'bg-white text-gray-500 group-hover:bg-gray-200'
                                                                 }`}>
-                                                                <Icon className="h-6 w-6" />
+                                                                <Icon className="h-6 w-6 transition-transform duration-300 group-hover:scale-110" />
                                                             </div>
                                                             <div className="flex-1 min-w-0">
                                                                 <h3 className={`font-medium truncate ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}>
@@ -866,35 +866,38 @@ export default function ProgramDetailPage() {
                         {/* AI Generation Section */}
                         {selectedAsset && (
                             <div key={`generation-${selectedAsset._id}-${refreshTrigger}`} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                                <div className="bg-gradient-to-r from-purple-50 to-pink-50 px-6 py-4 border-b border-gray-100">
-                                    <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-                                        <Sparkles className="h-5 w-5 mr-2 text-purple-600" />
-                                        AI Generation
+                                <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 px-6 py-4 border-b border-gray-200">
+                                    <h2 className="text-xl font-bold text-gray-800 flex items-center">
+                                        <Sparkles className="h-6 w-6 mr-3 text-purple-600" />
+                                        <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                                            AI Generation
+                                        </span>
                                     </h2>
+                                    <p className="text-sm text-gray-600 mt-1 ml-9">Generate engaging content from your assets</p>
                                 </div>
                                 <div className="p-6 space-y-4">
                                     {[
-                                        { type: 'summary', icon: '📝', label: 'Summary', gradient: 'from-blue-500 to-blue-600' },
-                                        { type: 'quiz', icon: '🧠', label: 'Quiz', gradient: 'from-green-500 to-green-600' },
-                                        { type: 'flashcard', icon: '📚', label: 'Flashcards', gradient: 'from-purple-500 to-purple-600' },
-                                        { type: 'case_study', icon: '📋', label: 'Case Study', gradient: 'from-orange-500 to-orange-600' },
-                                        { type: 'short_lecture', icon: '🎓', label: 'Short Lecture', gradient: 'from-teal-500 to-teal-600' },
-                                        { type: 'audio_track', icon: '🎵', label: 'Audio Track', gradient: 'from-indigo-500 to-indigo-600' },
-                                        // { type: 'video_script', icon: '🎬', label: 'Video Script', gradient: 'from-red-500 to-red-600' }
-                                    ].map(({ type, icon, label, gradient }) => {
+                                        { type: 'summary', icon: '📝', label: 'Summary', gradient: 'from-blue-600 to-blue-700', bgColor: 'bg-blue-50', textColor: 'text-blue-700', borderColor: 'border-blue-200' },
+                                        { type: 'quiz', icon: '🧠', label: 'Quiz', gradient: 'from-green-600 to-green-700', bgColor: 'bg-green-50', textColor: 'text-green-700', borderColor: 'border-green-200' },
+                                        { type: 'flashcard', icon: '📚', label: 'Flashcards', gradient: 'from-purple-600 to-purple-700', bgColor: 'bg-purple-50', textColor: 'text-purple-700', borderColor: 'border-purple-200' },
+                                        { type: 'case_study', icon: '📋', label: 'Case Study', gradient: 'from-orange-600 to-orange-700', bgColor: 'bg-orange-50', textColor: 'text-orange-700', borderColor: 'border-orange-200' },
+                                        { type: 'short_lecture', icon: '🎓', label: 'Short Lecture', gradient: 'from-teal-600 to-teal-700', bgColor: 'bg-teal-50', textColor: 'text-teal-700', borderColor: 'border-teal-200' },
+                                        { type: 'audio_track', icon: '🎵', label: 'Audio Track', gradient: 'from-indigo-600 to-indigo-700', bgColor: 'bg-indigo-50', textColor: 'text-indigo-700', borderColor: 'border-indigo-200' },
+                                        // { type: 'video_script', icon: '🎬', label: 'Video Script', gradient: 'from-red-600 to-red-700', bgColor: 'bg-red-50', textColor: 'text-red-700', borderColor: 'border-red-200' }
+                                    ].map(({ type, icon, label, gradient, bgColor, textColor, borderColor }) => {
                                         const existingContent = getLatestVersions(selectedAsset.generatedContent || [], undefined, type);
 
                                         return (
                                             <div key={`generation-type-${type}`} className="group">
-                                                <div className={`bg-gradient-to-r ${gradient} rounded-lg p-4 text-white shadow-sm`}>
+                                                <div className={`${bgColor} ${borderColor} border-2 rounded-lg p-4 shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-102 hover:-translate-y-1 cursor-pointer group`}>
                                                     <div className="flex items-center justify-between mb-3">
                                                         <div className="flex items-center space-x-3">
-                                                            <span className="text-2xl">{icon}</span>
-                                                            <span className="font-semibold text-lg">{label}</span>
+                                                            <span className="text-2xl filter drop-shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">{icon}</span>
+                                                            <span className={`font-bold text-lg ${textColor} transition-all duration-300 group-hover:text-opacity-90`}>{label}</span>
                                                         </div>
                                                         {existingContent.length > 0 && (
-                                                            <div className="bg-white/20 px-3 py-1 rounded-full">
-                                                                <span className="text-xs font-medium">{existingContent.length} generated</span>
+                                                            <div className={`${gradient} bg-gradient-to-r px-3 py-1 rounded-full text-white shadow-sm`}>
+                                                                <span className="text-xs font-bold">{existingContent.length} generated</span>
                                                             </div>
                                                         )}
                                                     </div>

@@ -29,7 +29,7 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
 
     // Clean up audio script for better TTS
     const cleanTextForTTS = (rawText: string): string => {
-        return rawText
+        let cleaned = rawText
             // Remove markdown headers (##, ###, etc.)
             .replace(/^#{1,6}\s+.*$/gm, '')
             // Remove markdown formatting
@@ -59,6 +59,29 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
             .replace(/\n\s*\n/g, '\n')
             .replace(/\s+/g, ' ')
             .trim();
+
+        // Special handling for Hindi text
+        if (language === 'hi') {
+            // Additional cleaning for Hindi TTS
+            cleaned = cleaned
+                .replace(/\u200C|\u200D/g, '') // Remove zero-width characters
+                .replace(/[\u0964\u0965]/g, '.') // Replace Devanagari punctuation with periods
+                .trim();
+            
+            console.log('🇮🇳 Hindi text cleaned for TTS:', {
+                originalLength: rawText.length,
+                cleanedLength: cleaned.length,
+                preview: cleaned.substring(0, 100),
+                hasDevanagari: /[\u0900-\u097F]/.test(cleaned)
+            });
+            
+            // If no Devanagari characters found, it might be romanized Hindi
+            if (!/[\u0900-\u097F]/.test(cleaned)) {
+                console.warn('⚠️ No Devanagari script detected in Hindi text. This might be romanized Hindi.');
+            }
+        }
+        
+        return cleaned;
     };
 
     // Estimate duration (rough calculation: ~150 words per minute)
@@ -67,9 +90,107 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
         return Math.ceil((words / 150) * 60); // seconds
     };
 
+    // Ensure voices are loaded
+    const ensureVoicesLoaded = (): Promise<SpeechSynthesisVoice[]> => {
+        return new Promise((resolve) => {
+            const voices = speechSynthesis.getVoices();
+            if (voices.length > 0) {
+                resolve(voices);
+            } else {
+                // Wait for voices to be loaded
+                speechSynthesis.addEventListener('voiceschanged', () => {
+                    resolve(speechSynthesis.getVoices());
+                }, { once: true });
+            }
+        });
+    };
+
+    // Debug function to log available voices for a language
+    const logAvailableVoices = (targetLanguage: string) => {
+        const voices = speechSynthesis.getVoices();
+        const languageVoices = voices.filter(voice => 
+            voice.lang.toLowerCase().includes(targetLanguage.toLowerCase()) ||
+            voice.lang.startsWith(targetLanguage.split('-')[0])
+        );
+        
+        console.log(`Available voices for ${targetLanguage}:`, languageVoices.map(v => ({
+            name: v.name,
+            lang: v.lang,
+            localService: v.localService
+        })));
+        
+        if (languageVoices.length === 0) {
+            console.warn(`No voices found for language: ${targetLanguage}`);
+            console.log('All available voices:', voices.map(v => ({ name: v.name, lang: v.lang })));
+        }
+    };
+
+    // Comprehensive TTS test function for Hindi
+    const testHindiTTS = async () => {
+        console.log('🔍 Testing Hindi TTS capabilities...');
+        
+        // Test 1: Check if speechSynthesis is available
+        if (!('speechSynthesis' in window)) {
+            console.error('❌ speechSynthesis not available in this browser');
+            return false;
+        }
+        
+        // Test 2: Load voices and check for Hindi
+        await ensureVoicesLoaded();
+        const voices = speechSynthesis.getVoices();
+        console.log('📊 Total voices available:', voices.length);
+        
+        const hindiVoices = voices.filter(voice => 
+            voice.lang.includes('hi') || 
+            voice.name.toLowerCase().includes('hindi') ||
+            voice.name.toLowerCase().includes('devanagari')
+        );
+        
+        console.log('🇮🇳 Hindi voices found:', hindiVoices);
+        
+        // Test 3: Try a simple Hindi test
+        const testText = 'नमस्ते, यह एक परीक्षण है।'; // "Hello, this is a test."
+        const testUtterance = new SpeechSynthesisUtterance(testText);
+        testUtterance.lang = 'hi-IN';
+        
+        if (hindiVoices.length > 0) {
+            testUtterance.voice = hindiVoices[0];
+        }
+        
+        return new Promise((resolve) => {
+            testUtterance.onstart = () => {
+                console.log('✅ Hindi TTS test started successfully');
+                speechSynthesis.cancel(); // Stop the test
+                resolve(true);
+            };
+            
+            testUtterance.onerror = (event) => {
+                console.error('❌ Hindi TTS test failed:', event.error);
+                resolve(false);
+            };
+            
+            testUtterance.onend = () => {
+                console.log('✅ Hindi TTS test completed');
+                resolve(true);
+            };
+            
+            // Set a timeout in case nothing happens
+            setTimeout(() => {
+                console.warn('⏰ Hindi TTS test timed out');
+                speechSynthesis.cancel();
+                resolve(false);
+            }, 3000);
+            
+            speechSynthesis.speak(testUtterance);
+        });
+    };
+
     // Initialize speech synthesis
-    const initializeSpeech = () => {
+    const initializeSpeech = async () => {
         if (!isSupported) return null;
+
+        // Ensure voices are loaded first
+        await ensureVoicesLoaded();
 
         const cleanedText = cleanTextForTTS(text);
         const utterance = new SpeechSynthesisUtterance(cleanedText);
@@ -79,7 +200,64 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
             language === 'fr' ? 'fr-FR' :
                 language === 'de' ? 'de-DE' :
                     language === 'it' ? 'it-IT' :
-                        language === 'pt' ? 'pt-BR' : 'en-US';
+                        language === 'pt' ? 'pt-BR' :
+                            language === 'ru' ? 'ru-RU' :
+                                language === 'ja' ? 'ja-JP' :
+                                    language === 'ko' ? 'ko-KR' :
+                                        language === 'zh' ? 'zh-CN' :
+                                            language === 'hi' ? 'hi-IN' :
+                                                language === 'ar' ? 'ar-SA' : 'en-US';
+
+        // Try to find a suitable voice for the language
+        const voices = speechSynthesis.getVoices();
+        const targetLang = utterance.lang;
+
+        // Debug: Log available voices for this language
+        logAvailableVoices(targetLang);
+
+        // Find the best voice for the language
+        let selectedVoice = voices.find(voice =>
+            voice.lang === targetLang || voice.lang.startsWith(targetLang.split('-')[0])
+        );
+
+        // Fallback to any voice that matches the language code
+        if (!selectedVoice && language !== 'en') {
+            selectedVoice = voices.find(voice =>
+                voice.lang.toLowerCase().includes(language.toLowerCase())
+            );
+        }
+
+        // For Hindi, try additional fallbacks
+        if (!selectedVoice && language === 'hi') {
+            // Try common Hindi voice patterns
+            selectedVoice = voices.find(voice => 
+                voice.name.toLowerCase().includes('hindi') ||
+                voice.name.toLowerCase().includes('devanagari') ||
+                voice.lang.includes('hi')
+            );
+            
+            // If still no Hindi voice, try Indian English as a fallback
+            if (!selectedVoice) {
+                selectedVoice = voices.find(voice => 
+                    voice.lang.includes('en-IN') ||
+                    voice.name.toLowerCase().includes('indian') ||
+                    voice.name.toLowerCase().includes('india')
+                );
+                
+                if (selectedVoice) {
+                    console.log('🇮🇳 Using Indian English voice as fallback for Hindi');
+                }
+            }
+        }
+
+        // Set the voice if found
+        if (selectedVoice) {
+            utterance.voice = selectedVoice;
+            console.log(`✅ Selected voice for ${language}:`, selectedVoice.name, selectedVoice.lang);
+        } else {
+            console.warn(`⚠️ No suitable voice found for language: ${language} (${targetLang})`);
+            console.log('💡 Tip: Hindi TTS may not be available on this system. The text will play in the default system voice.');
+        }
 
         // Set speech parameters
         utterance.rate = 0.9; // Slightly slower for clarity
@@ -120,8 +298,21 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
                 // This is likely a normal cancellation, just log it quietly
                 console.log('Speech synthesis cancelled');
             } else {
-                // This is a real error
-                console.error('Speech synthesis error:', errorType, event);
+                // This is a real error - provide detailed info for Hindi debugging
+                console.error('🚨 Speech synthesis error:', errorType, event);
+                console.error('Language:', language, 'Target Lang:', utterance.lang);
+                console.error('Selected Voice:', utterance.voice?.name, utterance.voice?.lang);
+                console.error('Text length:', cleanedText.length);
+                console.error('Text preview:', cleanedText.substring(0, 100));
+                
+                // Special handling for Hindi errors
+                if (language === 'hi') {
+                    console.error('🇮🇳 Hindi TTS Error - This might be due to:');
+                    console.error('1. No Hindi voice installed on system');
+                    console.error('2. Hindi text encoding issues');
+                    console.error('3. Browser TTS limitations');
+                    console.error('4. Text contains unsupported characters');
+                }
             }
 
             setIsPlaying(false);
@@ -136,10 +327,19 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
         return utterance;
     };
 
-    const handlePlay = () => {
+    const handlePlay = async () => {
         if (!isSupported) {
             alert('Text-to-speech is not supported in your browser.');
             return;
+        }
+
+        // Run Hindi TTS test if language is Hindi
+        if (language === 'hi') {
+            console.log('🇮🇳 Running Hindi TTS diagnostic...');
+            const hindiTestResult = await testHindiTTS();
+            if (!hindiTestResult) {
+                console.error('🚨 Hindi TTS test failed. Attempting fallback...');
+            }
         }
 
         try {
@@ -150,10 +350,27 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
                 setIsPlaying(true);
             } else {
                 // Start new
-                const utterance = initializeSpeech();
+                console.log(`🎵 Starting TTS for language: ${language}`);
+                const utterance = await initializeSpeech();
                 if (utterance) {
                     utteranceRef.current = utterance;
+                    
+                    // Add extra logging for Hindi
+                    if (language === 'hi') {
+                        console.log('🇮🇳 Hindi TTS Details:', {
+                            lang: utterance.lang,
+                            voice: utterance.voice?.name,
+                            voiceLang: utterance.voice?.lang,
+                            textLength: text.length,
+                            rate: utterance.rate,
+                            pitch: utterance.pitch,
+                            volume: utterance.volume
+                        });
+                    }
+                    
                     speechSynthesis.speak(utterance);
+                } else {
+                    console.error('❌ Failed to initialize speech synthesis');
                 }
             }
         } catch (error) {
