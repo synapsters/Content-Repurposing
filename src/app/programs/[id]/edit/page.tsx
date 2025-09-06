@@ -226,7 +226,7 @@ function EditProgramPage() {
             const assetsToSave = assets
                 .filter(asset => !asset.toDelete)
                 .map(asset => {
-                    const { isNew, toDelete, ...cleanAsset } = asset;
+                    const { isNew: _isNew, toDelete: _toDelete, ...cleanAsset } = asset;
                     return cleanAsset;
                 });
 
