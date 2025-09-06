@@ -10,7 +10,6 @@ import {
   Plus,
   BookOpen,
   FileText,
-  TrendingUp,
   Users,
   Globe,
   Sparkles,

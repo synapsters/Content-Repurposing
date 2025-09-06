@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
                 );
 
                 // Return user data (excluding password)
-                const { password: _, ...userWithoutPassword } = sampleUser;
+                const { password, ...userWithoutPassword } = sampleUser;
 
                 return NextResponse.json({
                     success: true,
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
             );
 
             // Return user data (excluding password)
-            const { password: userPassword, ...userWithoutPassword } = user.toObject();
+            const { password, ...userWithoutPassword } = user.toObject();
 
             return NextResponse.json({
                 success: true,
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
                 token
             });
 
-        } catch (dbError) {
+        } catch {
             console.log('Database connection failed, using sample users only');
         }
 

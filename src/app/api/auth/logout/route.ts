@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
     try {
         // In a real application, you might:
         // 1. Invalidate the JWT token (add to blacklist)

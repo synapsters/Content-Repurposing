@@ -10,15 +10,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import {
     Save,
     ArrowLeft,
-    Plus,
     Video,
     FileText,
     File,
-    X,
     Globe,
     Youtube,
-    Trash2,
-    Edit3
+    Trash2
 } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { supportedLanguages, formatFileSize, getLanguageFlag } from '@/lib/utils';
