@@ -22,6 +22,8 @@ export interface IGeneratedContent {
     language: string;
     generatedAt: Date;
     isPublished: boolean;
+    version: number;
+    status: 'published' | 'deprecated' | 'draft';
 }
 
 export interface IProgram extends Document {
@@ -62,6 +64,15 @@ const GeneratedContentSchema = new Schema<IGeneratedContent>({
     isPublished: {
         type: Boolean,
         default: false
+    },
+    version: {
+        type: Number,
+        default: 1
+    },
+    status: {
+        type: String,
+        enum: ['published', 'deprecated', 'draft'],
+        default: 'published'
     }
 });
 

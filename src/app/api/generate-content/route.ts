@@ -57,6 +57,14 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Get version number for this type and language
+        const existingContent = asset.generatedContent?.filter(
+            (content: IGeneratedContent) =>
+                content.type === contentType &&
+                content.language === (language || 'en')
+        ) || [];
+        const maxVersion = existingContent.length > 0 ? Math.max(...existingContent.map(c => c.version || 1)) : 0;
+
         // Create the new generated content object
         const newContent = {
             type: contentType,
@@ -64,7 +72,9 @@ export async function POST(request: NextRequest) {
             content: generatedContent,
             language: language || 'en',
             generatedAt: new Date(),
-            isPublished: false
+            isPublished: true,
+            version: maxVersion + 1,
+            status: 'published' as 'published' | 'deprecated' | 'draft'
         };
 
         // Initialize generatedContent array if it doesn't exist

@@ -231,7 +231,7 @@ export default function ContentGenerator({
     };
 
     const getExistingContentForType = (type: string) => {
-        return existingContent.filter(content => content.type === type);
+        return existingContent.filter(content => content.type === type && content.status === 'published');
     };
 
     const isGenerating = (type: string) => {

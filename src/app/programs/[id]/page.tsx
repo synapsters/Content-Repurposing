@@ -516,14 +516,19 @@ export default function ProgramDetailPage() {
                                 <CardTitle className="text-base font-semibold text-gray-900 leading-tight">
                                     {content.type.replace('_', ' ').toUpperCase()}
                                 </CardTitle>
-                                <CardDescription className="text-xs text-gray-500 mt-1">
+                                <CardDescription className="text-xs text-gray-500 mt-1 flex items-center gap-2">
                                     {content.isPublished && (
-                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-2">
-                                            <div className="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></div>
+                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <span className="w-1.5 h-1.5 bg-green-400 rounded-full mr-1 block"></span>
                                             Published
                                         </span>
                                     )}
-                                    {new Date(content.generatedAt).toLocaleDateString()}
+                                    {content.version && (
+                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-600">
+                                            v{content.version}
+                                        </span>
+                                    )}
+                                    <span>{new Date(content.generatedAt).toLocaleDateString()}</span>
                                 </CardDescription>
                             </div>
                         </div>
@@ -811,7 +816,7 @@ export default function ProgramDetailPage() {
                                         { type: 'short_lecture', icon: '🎓', label: 'Short Lecture', gradient: 'from-teal-500 to-teal-600' }
                                     ].map(({ type, icon, label, gradient }) => {
                                         const existingContent = selectedAsset.generatedContent?.filter(
-                                            content => content.type === type
+                                            content => content.type === type && content.status === 'published'
                                         ) || [];
 
                                         return (
@@ -915,7 +920,7 @@ export default function ProgramDetailPage() {
                                                     </div>
                                                     <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full font-medium">
                                                         {selectedAsset.generatedContent?.filter(
-                                                            content => content.language === language
+                                                            content => content.language === language && content.status === 'published'
                                                         ).length || 0}
                                                     </span>
                                                 </div>
@@ -966,7 +971,7 @@ export default function ProgramDetailPage() {
                                                 <nav className="-mb-px flex flex-wrap gap-2">
                                                     {(program.supportedLanguages || ['en']).map(language => {
                                                         const languageContent = selectedAsset.generatedContent?.filter(
-                                                            content => content.language === language
+                                                            content => content.language === language && content.status === 'published'
                                                         ) || [];
 
                                                         if (languageContent.length === 0) return null;
@@ -995,7 +1000,7 @@ export default function ProgramDetailPage() {
                                             <div className="space-y-6">
                                                 {selectedAsset.generatedContent
                                                     ?.filter(content =>
-                                                        content.language === selectedLanguage
+                                                        content.language === selectedLanguage && content.status === 'published'
                                                     )
                                                     .map((content) => (
                                                         <div key={`${content._id}-${content.generatedAt}-${refreshTrigger}`} className="w-full">

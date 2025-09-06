@@ -191,7 +191,7 @@ export default function ProgramsPage() {
                                                     </span>
                                                     <span className="flex items-center">
                                                         <FileText className="h-4 w-4 mr-1" />
-                                                        {program.assets?.reduce((acc, asset) => acc + (asset.generatedContent?.length || 0), 0) || 0} generated
+                                                        {program.assets?.reduce((acc, asset) => acc + (asset.generatedContent?.filter(content => content.status === 'published').length || 0), 0) || 0} generated
                                                     </span>
                                                 </div>
                                             </div>

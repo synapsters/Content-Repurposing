@@ -35,11 +35,11 @@ export async function POST(request: NextRequest) {
         }
 
         // Find the existing content within the asset
-        const existingContentIndex = asset.generatedContent.findIndex(
+        const existingContent = asset.generatedContent.find(
             (content: IGeneratedContent) => content._id?.toString() === contentId
         );
 
-        if (existingContentIndex === -1) {
+        if (!existingContent) {
             return NextResponse.json(
                 { error: 'Content not found' },
                 { status: 404 }
@@ -53,19 +53,40 @@ export async function POST(request: NextRequest) {
             language: language || 'en'
         });
 
-        // Update the existing content in place (keep same record, update content)
-        const existingContent = asset.generatedContent[existingContentIndex];
-        asset.generatedContent[existingContentIndex] = {
-            ...existingContent, // Keep all existing fields including _id
-            content: regeneratedContent, // Update only the content
-            generatedAt: new Date(), // Update timestamp
-            isPublished: false // Reset publish status
+        // Mark existing content as deprecated
+        const existingContentIndex = asset.generatedContent.findIndex(
+            (content: IGeneratedContent) => content._id?.toString() === contentId
+        );
+        asset.generatedContent[existingContentIndex].status = 'deprecated';
+
+        // Get the highest version number for this type and language
+        const sameTypeAndLanguageContent = asset.generatedContent.filter(
+            (content: IGeneratedContent) =>
+                content.type === contentType &&
+                content.language === (language || 'en')
+        );
+        const maxVersion = Math.max(...sameTypeAndLanguageContent.map(c => c.version || 1));
+
+        // Create new version of the content
+        const newContent: IGeneratedContent = {
+            type: contentType as 'summary' | 'quiz' | 'case_study' | 'short_lecture' | 'flashcard',
+            title: existingContent.title,
+            content: regeneratedContent,
+            language: language || 'en',
+            generatedAt: new Date(),
+            isPublished: true,
+            version: maxVersion + 1,
+            status: 'published'
         };
+
+        // Add the new content to the asset
+        asset.generatedContent.push(newContent);
 
         await program.save();
 
-        // Return the updated content
-        return NextResponse.json(asset.generatedContent[existingContentIndex]);
+        // Return the new content (which will be the last item in the array)
+        const newContentWithId = asset.generatedContent[asset.generatedContent.length - 1];
+        return NextResponse.json(newContentWithId);
     } catch (error) {
         console.error('Error regenerating content:', error);
         return NextResponse.json(

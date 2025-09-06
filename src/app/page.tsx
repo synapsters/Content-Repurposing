@@ -53,7 +53,7 @@ export default function Dashboard() {
         acc + (program.assets?.length || 0), 0) || 0;
       const totalGeneratedContent = data.programs?.reduce((acc: number, program: IProgram) => {
         const contentCount = program.assets?.reduce((assetAcc: number, asset) =>
-          assetAcc + (asset.generatedContent?.length || 0), 0) || 0;
+          assetAcc + (asset.generatedContent?.filter(content => content.status === 'published').length || 0), 0) || 0;
         return acc + contentCount;
       }, 0) || 0;
       const publishedPrograms = data.programs?.filter((program: IProgram) =>
@@ -192,7 +192,7 @@ export default function Dashboard() {
                             {program.assets?.length || 0} assets
                           </span>
                           <span className="text-xs text-gray-500">
-                            {program.assets?.reduce((acc, asset) => acc + (asset.generatedContent?.length || 0), 0) || 0} generated
+                            {program.assets?.reduce((acc, asset) => acc + (asset.generatedContent?.filter(content => content.status === 'published').length || 0), 0) || 0} generated
                           </span>
                           {program.isPublished && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
