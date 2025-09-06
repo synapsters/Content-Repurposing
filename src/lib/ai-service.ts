@@ -4,7 +4,7 @@ import { youtubeService } from './youtube-service';
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
 
 export interface ContentGenerationRequest {
-    type: 'summary' | 'quiz' | 'case_study' | 'short_lecture' | 'flashcard' | 'audio_track';
+    type: 'summary' | 'quiz' | 'case_study' | 'short_lecture' | 'flashcard' | 'audio_track' | 'video_script';
     sourceContent: string;
     language: string;
     additionalContext?: string;
@@ -29,6 +29,24 @@ export interface CaseStudy {
     challenges: string[];
     questions: string[];
     learningObjectives: string[];
+}
+
+export interface VideoScript {
+    title: string;
+    description: string;
+    duration: string;
+    scenes: VideoScene[];
+    voiceover: string;
+    callToAction: string;
+}
+
+export interface VideoScene {
+    sceneNumber: number;
+    duration: string;
+    visualDescription: string;
+    voiceoverText: string;
+    onScreenText?: string;
+    transitions?: string;
 }
 
 export class AIContentGenerator {
@@ -221,7 +239,59 @@ export class AIContentGenerator {
         return result.response.text();
     }
 
-    async generateContent(request: ContentGenerationRequest): Promise<string | QuizQuestion[] | FlashCard[] | CaseStudy> {
+    async generateVideoScript(content: string, language: string = 'en'): Promise<VideoScript> {
+        const prompt = `
+      Create a comprehensive video script for the following content in ${language}:
+      
+      Content: ${content}
+      
+      Requirements:
+      - Create an engaging 2-3 minute educational video script
+      - Structure it with clear scenes and visual descriptions
+      - Include detailed voiceover text for each scene
+      - Provide visual descriptions suitable for video production
+      - Add on-screen text suggestions where appropriate
+      - Include smooth transitions between scenes
+      - Make it suitable for educational/explainer video format
+      - Focus on visual storytelling and engagement
+      - Include a compelling call-to-action at the end
+      
+      Return the response as a JSON object with this exact structure:
+      {
+        "title": "Video title",
+        "description": "Brief video description",
+        "duration": "2-3 minutes",
+        "scenes": [
+          {
+            "sceneNumber": 1,
+            "duration": "15-20 seconds",
+            "visualDescription": "Detailed description of what viewers see",
+            "voiceoverText": "Exact text to be spoken",
+            "onScreenText": "Text overlay on screen (optional)",
+            "transitions": "How this scene transitions to next"
+          }
+        ],
+        "voiceover": "Complete voiceover script as one text",
+        "callToAction": "Final call-to-action message"
+      }
+      `;
+
+        const result = await this.model.generateContent(prompt);
+        const response = result.response.text();
+
+        try {
+            const jsonMatch = response.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                return JSON.parse(jsonMatch[0]);
+            }
+            throw new Error('Invalid JSON response');
+        } catch (error) {
+            console.error('Error parsing video script JSON:', error);
+            throw new Error('Failed to generate video script');
+        }
+    }
+
+    async generateContent(request: ContentGenerationRequest): Promise<string | QuizQuestion[] | FlashCard[] | CaseStudy | VideoScript> {
         const { type, sourceContent, language, additionalContext } = request;
 
         // Enhanced content processing for different source types
@@ -276,6 +346,9 @@ export class AIContentGenerator {
 
             case 'audio_track':
                 return await this.generateAudioTrack(contextualContent, language);
+
+            case 'video_script':
+                return await this.generateVideoScript(contextualContent, language);
 
             default:
                 throw new Error(`Unsupported content type: ${type}`);

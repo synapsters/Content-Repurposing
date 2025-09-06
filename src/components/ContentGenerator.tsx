@@ -8,6 +8,7 @@ import {
     Video,
     CreditCard,
     Volume2,
+    Film,
     Loader2,
     RefreshCw,
     CheckCircle
@@ -68,6 +69,13 @@ const contentTypes = [
         description: 'Generate audio narration script',
         icon: Volume2,
         color: 'bg-indigo-500'
+    },
+    {
+        type: 'video_script' as const,
+        title: 'Create Video Script',
+        description: 'Generate video script and storyboard',
+        icon: Film,
+        color: 'bg-red-500'
     }
 ];
 

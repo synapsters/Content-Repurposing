@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
 
         // Create new version of the content
         const newContent: IGeneratedContent = {
-            type: contentType as 'summary' | 'quiz' | 'case_study' | 'short_lecture' | 'flashcard' | 'audio_track',
+            type: contentType as 'summary' | 'quiz' | 'case_study' | 'short_lecture' | 'flashcard' | 'audio_track' | 'video_script',
             title: existingContent.title,
             content: regeneratedContent,
             language: language || 'en',

@@ -6,7 +6,7 @@ import Layout from '@/components/layout/Layout';
 import YouTubeEmbed from '@/components/YouTubeEmbed';
 import ContentGenerator from '@/components/ContentGenerator';
 import AudioPlayer from '@/components/AudioPlayer';
-import { QuizQuestion, FlashCard, CaseStudy } from '@/lib/ai-service';
+import { QuizQuestion, FlashCard, CaseStudy, VideoScript, VideoScene } from '@/lib/ai-service';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -15,6 +15,7 @@ import {
     FileText,
     Video,
     Volume2,
+    Film,
     BookOpen,
     Globe,
     Calendar,
@@ -406,6 +407,86 @@ export default function ProgramDetailPage() {
                         </div>
                     </div>
                 );
+            } else if (content.type === 'video_script' && typeof content.content === 'object') {
+                const videoScript = content.content as VideoScript;
+                return (
+                    <div className="space-y-4">
+                        <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-lg p-4 border border-red-200">
+                            <div className="flex items-center mb-3">
+                                <Film className="h-5 w-5 text-red-600 mr-2" />
+                                <h4 className="font-semibold text-red-800">Video Script & Storyboard</h4>
+                            </div>
+
+                            {/* Video Overview */}
+                            <div className="bg-white rounded-lg p-4 border border-red-100 mb-4">
+                                <h5 className="font-semibold text-gray-900 mb-2">{videoScript.title}</h5>
+                                <p className="text-sm text-gray-700 mb-2">{videoScript.description}</p>
+                                <div className="flex items-center text-xs text-red-600">
+                                    <span className="mr-2">⏱️</span>
+                                    <span>Duration: {videoScript.duration}</span>
+                                </div>
+                            </div>
+
+                            {/* Scenes */}
+                            <div className="space-y-3">
+                                <h5 className="font-semibold text-red-800 flex items-center">
+                                    <span className="mr-2">🎬</span>
+                                    Scenes & Storyboard
+                                </h5>
+                                {videoScript.scenes && (isExpanded ? videoScript.scenes : videoScript.scenes.slice(0, 3)).map((scene: VideoScene, index: number) => (
+                                    <div key={index} className="bg-white rounded-lg p-4 border border-red-100">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="font-semibold text-sm text-red-700">Scene {scene.sceneNumber}</span>
+                                            <span className="text-xs text-gray-500">{scene.duration}</span>
+                                        </div>
+
+                                        <div className="grid md:grid-cols-2 gap-3">
+                                            <div>
+                                                <p className="text-xs font-medium text-gray-600 mb-1">Visual Description:</p>
+                                                <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded">{scene.visualDescription}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-medium text-gray-600 mb-1">Voiceover:</p>
+                                                <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded">{scene.voiceoverText}</p>
+                                            </div>
+                                        </div>
+
+                                        {scene.onScreenText && (
+                                            <div className="mt-2">
+                                                <p className="text-xs font-medium text-gray-600 mb-1">On-Screen Text:</p>
+                                                <p className="text-sm text-blue-700 bg-blue-50 p-2 rounded font-medium">{scene.onScreenText}</p>
+                                            </div>
+                                        )}
+
+                                        {scene.transitions && (
+                                            <div className="mt-2">
+                                                <p className="text-xs font-medium text-gray-600 mb-1">Transition:</p>
+                                                <p className="text-xs text-gray-600 italic">{scene.transitions}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+
+                                {!isExpanded && videoScript.scenes && videoScript.scenes.length > 3 && (
+                                    <p className="text-sm text-gray-500 text-center py-2">
+                                        +{videoScript.scenes.length - 3} more scenes...
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Call to Action */}
+                            {videoScript.callToAction && isExpanded && (
+                                <div className="mt-4 bg-gradient-to-r from-red-100 to-pink-100 rounded-lg p-3 border border-red-200">
+                                    <h5 className="font-semibold text-red-800 mb-2 flex items-center">
+                                        <span className="mr-2">📢</span>
+                                        Call to Action
+                                    </h5>
+                                    <p className="text-sm text-red-700">{videoScript.callToAction}</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
             } else {
                 // Handle summary, short_lecture, and other text content
                 const textContent = typeof content.content === 'string'
@@ -755,7 +836,8 @@ export default function ProgramDetailPage() {
                                         { type: 'flashcard', icon: '📚', label: 'Flashcards', gradient: 'from-purple-500 to-purple-600' },
                                         { type: 'case_study', icon: '📋', label: 'Case Study', gradient: 'from-orange-500 to-orange-600' },
                                         { type: 'short_lecture', icon: '🎓', label: 'Short Lecture', gradient: 'from-teal-500 to-teal-600' },
-                                        { type: 'audio_track', icon: '🎵', label: 'Audio Track', gradient: 'from-indigo-500 to-indigo-600' }
+                                        { type: 'audio_track', icon: '🎵', label: 'Audio Track', gradient: 'from-indigo-500 to-indigo-600' },
+                                        { type: 'video_script', icon: '🎬', label: 'Video Script', gradient: 'from-red-500 to-red-600' }
                                     ].map(({ type, icon, label, gradient }) => {
                                         const existingContent = getLatestVersions(selectedAsset.generatedContent || [], undefined, type);
 
