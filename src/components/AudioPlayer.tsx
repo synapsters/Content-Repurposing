@@ -17,9 +17,10 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
     const [currentPosition, setCurrentPosition] = useState(0);
     const [duration, setDuration] = useState(0);
     const [isSupported, setIsSupported] = useState(false);
-
+    
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
+    const isStoppingRef = useRef(false);
 
     // Check if speech synthesis is supported
     useEffect(() => {
@@ -107,8 +108,17 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
             }
         };
 
-        utterance.onerror = (event) => {
-            console.error('Speech synthesis error:', event);
+        utterance.onerror = (event: any) => {
+            // Check if this is a real error or just a cancellation
+            const errorType = event?.error || 'unknown';
+
+            // Don't log errors for normal cancellation (when user clicks stop)
+            if (errorType === 'canceled' || errorType === 'interrupted' || Object.keys(event).length === 0) {
+                console.log('Speech synthesis cancelled by user');
+            } else {
+                console.error('Speech synthesis error:', errorType, event);
+            }
+
             setIsPlaying(false);
             setIsPaused(false);
             setCurrentPosition(0);
