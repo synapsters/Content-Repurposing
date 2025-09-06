@@ -54,19 +54,20 @@ export class AIContentGenerator {
 
     async generateSummary(content: string, language: string = 'en'): Promise<string> {
         const prompt = `
-      Create a comprehensive summary of the following content in ${language}:
+      **You are an expert technical content summarizer.**
+
+      **Your primary task is to summarize the technical content provided by the user in ${language} language.**:
       
+      **Here are the strict rules for the summary:**
+ 
+      * Include **only** the technical terms and concepts from the user's content.
+      * Omit all jargon, filler words, and long-winded explanations.
+      * Each technical term should be accompanied by a very short, one-line explanation. A second line is permissible only if the term is critically important and cannot be explained in a single line.
+      * The final summary must be between 120 and 150 words.
+      * The summary should be presented as a concise, structured list or series of bullet points for maximum clarity.
+      
+      ---
       Content: ${content}
-      
-      Requirements:
-      - Keep it concise but comprehensive
-      - Highlight key points and main concepts
-      - Use bullet points for better readability
-      - Maintain the original context and meaning
-      - If this is video content, focus on the actual video title, description, and topic
-      - Base the summary ONLY on the provided content information
-      
-      Please provide only the summary without any additional text.
     `;
 
         const result = await this.model.generateContent(prompt);
@@ -75,26 +76,46 @@ export class AIContentGenerator {
 
     async generateQuiz(content: string, language: string = 'en', numQuestions: number = 5): Promise<QuizQuestion[]> {
         const prompt = `
-      Create ${numQuestions} multiple-choice quiz questions based on the following content in ${language}:
-      
-      Content: ${content}
-      
-      Requirements:
-      - Each question should have 4 options
-      - Include the correct answer index (0-3)
-      - Provide explanations for correct answers
-      - Cover different aspects of the content
-      - Make questions challenging but fair
-      
-      Return the response as a JSON array with this structure:
-      [
-        {
-          "question": "Question text",
-          "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
-          "correctAnswer": 0,
-          "explanation": "Explanation text"
-        }
-      ]
+      You are an expert quiz master. Your goal is to generate ${numQuestions} single-choice questions from the technical content provided by the user in ${language} language. These questions should cover the user-provided content comprehensively.
+ 
+        ---
+        
+        ### **Question Generation Requirements**
+        
+        1.  **Question Count:** Generate a total of 10 to 15 single-choice questions. Each question must have exactly four options (A, B, C, D), with only one correct answer.
+        2.  **Difficulty Distribution:**
+            * **Easy/Beginner:** Approximately 30% of the questions should be easy level. These questions should test fundamental knowledge and straightforward concepts.
+            * **Medium:** Approximately 50% of the questions should be medium level. These questions should require a deeper understanding and application of the concepts.
+            * **Advanced:** Approximately 20% of the questions should be advanced level. These questions should be more complex, possibly requiring critical thinking, problem-solving, or the integration of multiple concepts.
+        3.  **Question Variety:** Ensure a mix of question types to avoid monotony:
+            * **Straightforward Questions:** These directly test knowledge recall.
+            * **Creative Questions:** These might use analogies or ask the user to identify a concept based on a non-obvious description.
+            * **Case-Based Questions:** These present a short scenario or problem and ask the user to apply their knowledge to find the best solution.
+        4.  **Content Coverage:** The questions must be generated exclusively from the technical content provided by the user. Do not introduce new information or concepts.
+        5.  **Output Format:** Present the questions clearly, with the correct answer specified for each.
+        
+        ---
+        
+        ### **Example Output Structure**
+        
+        To maintain consistency and clarity, please use the following format for each question:
+        
+        Return the response as a JSON array with this structure:
+        [
+            {
+            "question": "Question text",
+            "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+            "correctAnswer": 0,
+            "explanation": "Explanation text"
+            }
+        ]
+        
+        **Explanation: ** A concise explanation for the correct answer.
+
+        ---
+
+        Content: ${content}
+
     `;
 
         const result = await this.model.generateContent(prompt);
@@ -115,18 +136,48 @@ export class AIContentGenerator {
 
     async generateCaseStudy(content: string, language: string = 'en'): Promise<CaseStudy> {
         const prompt = `
-      Create a detailed case study based on the following content in ${language}:
-      
-      Content: ${content}
-      
-      Requirements:
-      - Create a realistic scenario that applies the concepts
-      - Include specific challenges that need to be addressed
-      - Provide thought-provoking questions for analysis
-      - Define clear learning objectives
-      - Make it practical and engaging
-      
-      Return the response as JSON with this structure:
+        You are an expert case study creator. Your task is to generate a comprehensive and practical case study in ${language} language tailored for a specific technology and user-provided content. The case study should be highly relevant and focus on the practical application of the provided material.
+ 
+        Your output must include the following sections:
+        
+        ### **Case Explanation**
+        
+        * A brief, engaging, and realistic scenario that sets the context for the problem.
+        * Clearly describe the business or real-world situation the learner will be addressing.
+        
+        ---
+        
+        ### **Problem Statement**
+        
+        * A concise and clear statement outlining the core problem the learner needs to solve.
+        * The problem should directly relate to the content provided by the user.
+        
+        ---
+        
+        ### **Expectations & Deliverables**
+        
+        * A detailed list of the specific outcomes required from the learner.
+        * This section should specify the exact deliverables, such as a project file (.py, .ipynb, .xlsx, etc.) and any additional materials like a presentation deck (e.g., 5 slides).
+        * Clearly state what a successful solution should demonstrate (e.g., model accuracy, data insights, functional code, etc.).
+        
+        ---
+        
+        ### **Solution Structure**
+        
+        * A high-level guide on how the learner should approach the problem.
+        * Suggest a logical flow, such as "Data Cleaning -> Exploratory Data Analysis -> Model Building -> Visualization."
+        * This is not a step-by-step solution but a roadmap to guide their thinking.
+        
+        ---
+        
+        ### **File Format(s)**
+        
+        * Explicitly state the required file format(s) for the submission.
+        * Be specific, for example: "A single Jupyter Notebook (.ipynb) file and a PDF of your 5-slide presentation."
+        
+        ---
+        
+        Strictly return the response as JSON with this structure:
       {
         "title": "Case Study Title",
         "scenario": "Detailed scenario description",
@@ -134,6 +185,11 @@ export class AIContentGenerator {
         "questions": ["Question 1", "Question 2", "Question 3"],
         "learningObjectives": ["Objective 1", "Objective 2", "Objective 3"]
       }
+
+        ---
+
+        Content: ${content}
+      
     `;
 
         const result = await this.model.generateContent(prompt);
@@ -153,19 +209,26 @@ export class AIContentGenerator {
 
     async generateShortLecture(content: string, language: string = 'en'): Promise<string> {
         const prompt = `
-      Transform the following content into a short, engaging lecture format in ${language}:
-      
-      Content: ${content}
-      
-      Requirements:
-      - Create an engaging introduction
-      - Break down complex concepts into digestible parts
-      - Use examples and analogies where appropriate
-      - Include a clear conclusion with key takeaways
-      - Keep it concise but informative (5-10 minutes reading time)
-      - Use a conversational, educational tone
-      
-      Please provide only the lecture content without any additional text.
+        You are a technical content summarization expert. Your task is to analyze and summarize technical learning materials provided by the user in ${language} language.
+ 
+        Your response must meet the following criteria:
+        
+        * **Structure**: Present the summary in a well-organized, point-by-point format. Use headings and bullet points to ensure clarity and readability.
+        * **Accuracy and Completeness**:
+            * Thoroughly capture all key technical concepts, topics, and definitions from the original content. Do not omit any technical term.
+            * Do not add any new information, examples, or interpretations. Your summary must be derived *exclusively* from the user's provided text.
+        * **Clarity**:
+            * Rewrite complex technical jargon into simple, easy-to-understand language.
+            * Stictly omit all jargons and storylines from the content.
+            * Maintain a clear, concise, and professional tone.
+        * **Summary Length**:
+            * Response should be strictly at-most one-thrid the size of the original data.
+        * **Format**: The output should be a clean, direct summary. Do not include any conversational filler, introductory phrases, or concluding remarks. Just provide the summary.
+        
+        ---
+
+        Content: ${content}
+        
     `;
 
         const result = await this.model.generateContent(prompt);

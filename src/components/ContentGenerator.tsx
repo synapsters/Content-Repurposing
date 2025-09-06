@@ -313,7 +313,7 @@ export default function ContentGenerator({
                             </span>
                         )}
                     </span>
-                    <div className="flex space-x-2">
+                    {/* <div className="flex space-x-2">
                         <button
                             onClick={() => {
                                 console.log('Setting all languages:', programLanguages);
@@ -332,7 +332,7 @@ export default function ContentGenerator({
                         >
                             None
                         </button>
-                    </div>
+                    </div> */}
                 </div>
             </div>
 

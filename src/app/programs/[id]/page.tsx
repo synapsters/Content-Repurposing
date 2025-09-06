@@ -7,6 +7,8 @@ import YouTubeEmbed from '@/components/YouTubeEmbed';
 import ContentGenerator from '@/components/ContentGenerator';
 import AudioPlayer from '@/components/AudioPlayer';
 import { QuizQuestion, FlashCard, CaseStudy, VideoScript, VideoScene } from '@/lib/ai-service';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -493,13 +495,48 @@ export default function ProgramDetailPage() {
                     ? content.content
                     : JSON.stringify(content.content, null, 2);
 
-                return (
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <pre className="whitespace-pre-wrap text-gray-700 text-sm font-sans leading-relaxed">
-                            {isExpanded ? textContent : `${textContent.substring(0, 400)}${textContent.length > 400 ? '...' : ''}`}
-                        </pre>
-                    </div>
-                );
+                const displayContent = isExpanded ? textContent : `${textContent.substring(0, 400)}${textContent.length > 400 ? '...' : ''}`;
+
+                // Use markdown rendering for summary and short_lecture content
+                if (content.type === 'summary' || content.type === 'short_lecture') {
+                    return (
+                        <div className="bg-white rounded-lg p-4 border border-gray-200">
+                            <div className="prose prose-sm max-w-none text-gray-700">
+                                <ReactMarkdown
+                                    remarkPlugins={[remarkGfm]}
+                                    components={{
+                                        h1: ({ node, ...props }) => <h1 className="text-xl font-bold text-gray-900 mb-3" {...props} />,
+                                        h2: ({ node, ...props }) => <h2 className="text-lg font-semibold text-gray-800 mb-2" {...props} />,
+                                        h3: ({ node, ...props }) => <h3 className="text-base font-medium text-gray-800 mb-2" {...props} />,
+                                        p: ({ node, ...props }) => <p className="mb-3 leading-relaxed" {...props} />,
+                                        ul: ({ node, ...props }) => <ul className="list-disc list-inside mb-3 space-y-1" {...props} />,
+                                        ol: ({ node, ...props }) => <ol className="list-decimal list-inside mb-3 space-y-1" {...props} />,
+                                        li: ({ node, ...props }) => <li className="text-gray-700" {...props} />,
+                                        strong: ({ node, ...props }) => <strong className="font-semibold text-gray-900" {...props} />,
+                                        em: ({ node, ...props }) => <em className="italic text-gray-800" {...props} />,
+                                        code: ({ node, ...props }) => <code className="bg-gray-100 px-1 py-0.5 rounded text-sm font-mono" {...props} />,
+                                        pre: ({ node, ...props }) => <pre className="bg-gray-50 p-3 rounded-lg overflow-x-auto text-sm" {...props} />,
+                                        blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-blue-200 pl-4 italic text-gray-600 mb-3" {...props} />,
+                                        table: ({ node, ...props }) => <table className="min-w-full border border-gray-200 mb-3" {...props} />,
+                                        th: ({ node, ...props }) => <th className="border border-gray-200 px-3 py-2 bg-gray-50 font-semibold text-left" {...props} />,
+                                        td: ({ node, ...props }) => <td className="border border-gray-200 px-3 py-2" {...props} />,
+                                    }}
+                                >
+                                    {displayContent}
+                                </ReactMarkdown>
+                            </div>
+                        </div>
+                    );
+                } else {
+                    // For other content types, use the original pre formatting
+                    return (
+                        <div className="bg-white rounded-lg p-4 border border-gray-200">
+                            <pre className="whitespace-pre-wrap text-gray-700 text-sm font-sans leading-relaxed">
+                                {displayContent}
+                            </pre>
+                        </div>
+                    );
+                }
             }
         };
 
