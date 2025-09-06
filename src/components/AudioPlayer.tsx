@@ -67,20 +67,20 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
                 .replace(/\u200C|\u200D/g, '') // Remove zero-width characters
                 .replace(/[\u0964\u0965]/g, '.') // Replace Devanagari punctuation with periods
                 .trim();
-            
+
             console.log('🇮🇳 Hindi text cleaned for TTS:', {
                 originalLength: rawText.length,
                 cleanedLength: cleaned.length,
                 preview: cleaned.substring(0, 100),
                 hasDevanagari: /[\u0900-\u097F]/.test(cleaned)
             });
-            
+
             // If no Devanagari characters found, it might be romanized Hindi
             if (!/[\u0900-\u097F]/.test(cleaned)) {
                 console.warn('⚠️ No Devanagari script detected in Hindi text. This might be romanized Hindi.');
             }
         }
-        
+
         return cleaned;
     };
 
@@ -90,35 +90,56 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
         return Math.ceil((words / 150) * 60); // seconds
     };
 
-    // Ensure voices are loaded
+    // Ensure voices are loaded with timeout and retry
     const ensureVoicesLoaded = (): Promise<SpeechSynthesisVoice[]> => {
-        return new Promise((resolve) => {
-            const voices = speechSynthesis.getVoices();
-            if (voices.length > 0) {
-                resolve(voices);
-            } else {
-                // Wait for voices to be loaded
-                speechSynthesis.addEventListener('voiceschanged', () => {
-                    resolve(speechSynthesis.getVoices());
-                }, { once: true });
-            }
+        return new Promise((resolve, reject) => {
+            let attempts = 0;
+            const maxAttempts = 10;
+
+            const checkVoices = () => {
+                const voices = speechSynthesis.getVoices();
+                attempts++;
+
+                if (voices.length > 0) {
+                    console.log(`✅ Voices loaded successfully (${voices.length} voices, attempt ${attempts})`);
+                    resolve(voices);
+                } else if (attempts >= maxAttempts) {
+                    console.warn(`⚠️ Voice loading timed out after ${maxAttempts} attempts`);
+                    resolve([]); // Return empty array instead of rejecting
+                } else {
+                    console.log(`🔄 Waiting for voices... (attempt ${attempts}/${maxAttempts})`);
+                    setTimeout(checkVoices, 100); // Check every 100ms
+                }
+            };
+
+            // Initial check
+            checkVoices();
+
+            // Also listen for voiceschanged event
+            speechSynthesis.addEventListener('voiceschanged', () => {
+                const voices = speechSynthesis.getVoices();
+                if (voices.length > 0) {
+                    console.log(`✅ Voices loaded via event (${voices.length} voices)`);
+                    resolve(voices);
+                }
+            }, { once: true });
         });
     };
 
     // Debug function to log available voices for a language
     const logAvailableVoices = (targetLanguage: string) => {
         const voices = speechSynthesis.getVoices();
-        const languageVoices = voices.filter(voice => 
+        const languageVoices = voices.filter(voice =>
             voice.lang.toLowerCase().includes(targetLanguage.toLowerCase()) ||
             voice.lang.startsWith(targetLanguage.split('-')[0])
         );
-        
+
         console.log(`Available voices for ${targetLanguage}:`, languageVoices.map(v => ({
             name: v.name,
             lang: v.lang,
             localService: v.localService
         })));
-        
+
         if (languageVoices.length === 0) {
             console.warn(`No voices found for language: ${targetLanguage}`);
             console.log('All available voices:', voices.map(v => ({ name: v.name, lang: v.lang })));
@@ -128,60 +149,101 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
     // Comprehensive TTS test function for Hindi
     const testHindiTTS = async () => {
         console.log('🔍 Testing Hindi TTS capabilities...');
-        
+
         // Test 1: Check if speechSynthesis is available
         if (!('speechSynthesis' in window)) {
             console.error('❌ speechSynthesis not available in this browser');
             return false;
         }
-        
+
+        // Clear any existing speech first
+        speechSynthesis.cancel();
+        await new Promise(resolve => setTimeout(resolve, 100)); // Wait a bit
+
         // Test 2: Load voices and check for Hindi
-        await ensureVoicesLoaded();
-        const voices = speechSynthesis.getVoices();
+        const voices = await ensureVoicesLoaded();
         console.log('📊 Total voices available:', voices.length);
-        
-        const hindiVoices = voices.filter(voice => 
-            voice.lang.includes('hi') || 
+
+        const hindiVoices = voices.filter(voice =>
+            voice.lang.includes('hi') ||
             voice.name.toLowerCase().includes('hindi') ||
             voice.name.toLowerCase().includes('devanagari')
         );
-        
+
         console.log('🇮🇳 Hindi voices found:', hindiVoices);
-        
-        // Test 3: Try a simple Hindi test
-        const testText = 'नमस्ते, यह एक परीक्षण है।'; // "Hello, this is a test."
-        const testUtterance = new SpeechSynthesisUtterance(testText);
-        testUtterance.lang = 'hi-IN';
-        
-        if (hindiVoices.length > 0) {
-            testUtterance.voice = hindiVoices[0];
-        }
-        
+
+        // Test 3: Try a simple Hindi test with better error handling
+        const testText = 'नमस्ते'; // Simple "Hello"
+
         return new Promise((resolve) => {
-            testUtterance.onstart = () => {
-                console.log('✅ Hindi TTS test started successfully');
-                speechSynthesis.cancel(); // Stop the test
-                resolve(true);
+            let testCompleted = false;
+
+            const completeTest = (success: boolean, reason: string) => {
+                if (!testCompleted) {
+                    testCompleted = true;
+                    console.log(`🎯 Hindi TTS test ${success ? 'passed' : 'failed'}: ${reason}`);
+                    resolve(success);
+                }
             };
-            
-            testUtterance.onerror = (event) => {
-                console.error('❌ Hindi TTS test failed:', event.error);
-                resolve(false);
-            };
-            
-            testUtterance.onend = () => {
-                console.log('✅ Hindi TTS test completed');
-                resolve(true);
-            };
-            
-            // Set a timeout in case nothing happens
-            setTimeout(() => {
-                console.warn('⏰ Hindi TTS test timed out');
-                speechSynthesis.cancel();
-                resolve(false);
-            }, 3000);
-            
-            speechSynthesis.speak(testUtterance);
+
+            try {
+                const testUtterance = new SpeechSynthesisUtterance(testText);
+                testUtterance.lang = 'hi-IN';
+                testUtterance.rate = 1.0;
+                testUtterance.pitch = 1.0;
+                testUtterance.volume = 0.1; // Very quiet for test
+
+                if (hindiVoices.length > 0) {
+                    testUtterance.voice = hindiVoices[0];
+                    console.log('🎤 Using Hindi voice:', hindiVoices[0].name);
+                } else {
+                    console.log('🎤 No Hindi voice found, using default');
+                }
+
+                testUtterance.onstart = () => {
+                    console.log('✅ Hindi TTS test started successfully');
+                    // Let it play for a moment then stop
+                    setTimeout(() => {
+                        speechSynthesis.cancel();
+                        completeTest(true, 'TTS started and played successfully');
+                    }, 500);
+                };
+
+                testUtterance.onerror = (event) => {
+                    console.error('❌ Hindi TTS test error:', event.error, event);
+
+                    // Handle specific error types
+                    if (event.error === 'interrupted') {
+                        completeTest(false, 'TTS was interrupted - this usually means voice loading issues or browser restrictions');
+                    } else if (event.error === 'not-allowed') {
+                        completeTest(false, 'TTS not allowed - check browser permissions');
+                    } else if (event.error === 'network') {
+                        completeTest(false, 'Network error - voice may not be available');
+                    } else {
+                        completeTest(false, `Unknown error: ${event.error}`);
+                    }
+                };
+
+                testUtterance.onend = () => {
+                    console.log('✅ Hindi TTS test completed naturally');
+                    completeTest(true, 'TTS completed successfully');
+                };
+
+                // Set a longer timeout for voice loading
+                setTimeout(() => {
+                    if (!testCompleted) {
+                        speechSynthesis.cancel();
+                        completeTest(false, 'Test timed out - voice may not be responding');
+                    }
+                }, 5000);
+
+                console.log('🎵 Starting Hindi TTS test...');
+                speechSynthesis.speak(testUtterance);
+
+            } catch (error) {
+                console.error('❌ Hindi TTS test exception:', error);
+                completeTest(false, `Exception: ${error}`);
+            }
         });
     };
 
@@ -230,20 +292,20 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
         // For Hindi, try additional fallbacks
         if (!selectedVoice && language === 'hi') {
             // Try common Hindi voice patterns
-            selectedVoice = voices.find(voice => 
+            selectedVoice = voices.find(voice =>
                 voice.name.toLowerCase().includes('hindi') ||
                 voice.name.toLowerCase().includes('devanagari') ||
                 voice.lang.includes('hi')
             );
-            
+
             // If still no Hindi voice, try Indian English as a fallback
             if (!selectedVoice) {
-                selectedVoice = voices.find(voice => 
+                selectedVoice = voices.find(voice =>
                     voice.lang.includes('en-IN') ||
                     voice.name.toLowerCase().includes('indian') ||
                     voice.name.toLowerCase().includes('india')
                 );
-                
+
                 if (selectedVoice) {
                     console.log('🇮🇳 Using Indian English voice as fallback for Hindi');
                 }
@@ -304,7 +366,7 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
                 console.error('Selected Voice:', utterance.voice?.name, utterance.voice?.lang);
                 console.error('Text length:', cleanedText.length);
                 console.error('Text preview:', cleanedText.substring(0, 100));
-                
+
                 // Special handling for Hindi errors
                 if (language === 'hi') {
                     console.error('🇮🇳 Hindi TTS Error - This might be due to:');
@@ -333,15 +395,6 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
             return;
         }
 
-        // Run Hindi TTS test if language is Hindi
-        if (language === 'hi') {
-            console.log('🇮🇳 Running Hindi TTS diagnostic...');
-            const hindiTestResult = await testHindiTTS();
-            if (!hindiTestResult) {
-                console.error('🚨 Hindi TTS test failed. Attempting fallback...');
-            }
-        }
-
         try {
             if (isPaused) {
                 // Resume
@@ -349,32 +402,60 @@ export default function AudioPlayer({ text, language = 'en', className = '' }: A
                 setIsPaused(false);
                 setIsPlaying(true);
             } else {
-                // Start new
+                // Clear any existing speech to prevent conflicts
+                speechSynthesis.cancel();
+                await new Promise(resolve => setTimeout(resolve, 100));
+
                 console.log(`🎵 Starting TTS for language: ${language}`);
+
+                // For Hindi, run a quick diagnostic first
+                if (language === 'hi') {
+                    console.log('🇮🇳 Preparing Hindi TTS...');
+
+                    // Ensure voices are loaded before proceeding
+                    const voices = await ensureVoicesLoaded();
+                    const hindiVoices = voices.filter(voice =>
+                        voice.lang.includes('hi') ||
+                        voice.name.toLowerCase().includes('hindi')
+                    );
+
+                    if (hindiVoices.length === 0) {
+                        console.warn('⚠️ No Hindi voices found. Will use fallback voice.');
+                    } else {
+                        console.log('✅ Hindi voices available:', hindiVoices.map(v => v.name));
+                    }
+                }
+
                 const utterance = await initializeSpeech();
                 if (utterance) {
                     utteranceRef.current = utterance;
-                    
+
                     // Add extra logging for Hindi
                     if (language === 'hi') {
-                        console.log('🇮🇳 Hindi TTS Details:', {
+                        console.log('🇮🇳 Hindi TTS Configuration:', {
                             lang: utterance.lang,
-                            voice: utterance.voice?.name,
-                            voiceLang: utterance.voice?.lang,
+                            voice: utterance.voice?.name || 'Default',
+                            voiceLang: utterance.voice?.lang || 'Unknown',
                             textLength: text.length,
+                            textPreview: text.substring(0, 50),
                             rate: utterance.rate,
                             pitch: utterance.pitch,
                             volume: utterance.volume
                         });
                     }
-                    
+
+                    // Add a small delay before speaking to ensure everything is ready
+                    await new Promise(resolve => setTimeout(resolve, 200));
+
+                    console.log('🎤 Starting speech synthesis...');
                     speechSynthesis.speak(utterance);
                 } else {
                     console.error('❌ Failed to initialize speech synthesis');
+                    setIsPlaying(false);
                 }
             }
         } catch (error) {
-            console.error('Error playing audio:', error);
+            console.error('❌ Error playing audio:', error);
             setIsPlaying(false);
             setIsPaused(false);
         }
