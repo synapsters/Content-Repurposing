@@ -11,14 +11,12 @@ import {
     Save,
     ArrowLeft,
     Plus,
-    Upload,
     Video,
     FileText,
     File,
     X,
     Globe,
-    Youtube,
-    Link
+    Youtube
 } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { supportedLanguages, formatFileSize } from '@/lib/utils';
@@ -46,13 +44,12 @@ export default function CreateProgramPage() {
     const [assets, setAssets] = useState<Asset[]>([]);
     const [currentTag, setCurrentTag] = useState('');
     const [activeTab, setActiveTab] = useState<'details' | 'assets'>('details');
-    const [videoInputType, setVideoInputType] = useState<'upload' | 'youtube' | 'url'>('upload');
     const [videoInput, setVideoInput] = useState('');
 
     const onDrop = async (acceptedFiles: File[]) => {
         for (const file of acceptedFiles) {
             const asset: Asset = {
-                type: file.type.startsWith('video/') ? 'video' : 'document',
+                type: 'document',
                 title: file.name,
                 file,
                 fileSize: file.size,
@@ -78,9 +75,6 @@ export default function CreateProgramPage() {
                 // Continue with file object for now
             }
 
-            if (file.type.startsWith('video/')) {
-                asset.duration = 0; // Would be extracted from video metadata
-            }
 
             setAssets(prev => [...prev, asset]);
         }
@@ -89,7 +83,6 @@ export default function CreateProgramPage() {
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
         accept: {
-            'video/*': ['.mp4', '.avi', '.mov', '.wmv'],
             'application/pdf': ['.pdf'],
             'application/msword': ['.doc'],
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
@@ -142,25 +135,41 @@ export default function CreateProgramPage() {
         if (!videoInput.trim()) return;
 
         let url = videoInput.trim();
-        let title = 'Video Asset';
+        let title = 'YouTube Video';
+        let videoId = '';
 
-        // Handle YouTube URLs
-        if (videoInput.includes('youtube.com') || videoInput.includes('youtu.be')) {
-            title = 'YouTube Video';
-            // Convert to embeddable format if needed
-            if (videoInput.includes('watch?v=')) {
-                const videoId = videoInput.split('watch?v=')[1].split('&')[0];
-                url = `https://www.youtube.com/watch?v=${videoId}`;
-            } else if (videoInput.includes('youtu.be/')) {
-                const videoId = videoInput.split('youtu.be/')[1].split('?')[0];
-                url = `https://www.youtube.com/watch?v=${videoId}`;
+        // Extract video ID from various YouTube URL formats
+        if (url.includes('<iframe')) {
+            // Handle iframe embed code
+            const srcMatch = url.match(/src="([^"]*)/);
+            if (srcMatch) {
+                url = srcMatch[1];
             }
         }
+
+        // Extract video ID from different YouTube URL formats
+        if (url.includes('youtube.com/embed/')) {
+            videoId = url.split('youtube.com/embed/')[1].split('?')[0];
+        } else if (url.includes('youtube.com/watch?v=')) {
+            videoId = url.split('watch?v=')[1].split('&')[0];
+        } else if (url.includes('youtu.be/')) {
+            videoId = url.split('youtu.be/')[1].split('?')[0];
+        } else if (url.includes('youtube.com') && url.includes('v=')) {
+            videoId = url.split('v=')[1].split('&')[0];
+        }
+
+        if (!videoId) {
+            alert('Please enter a valid YouTube URL or embed code');
+            return;
+        }
+
+        // Store as standard YouTube watch URL
+        const cleanUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
         const asset: Asset = {
             type: 'video',
             title,
-            url
+            url: cleanUrl
         };
 
         setAssets(prev => [...prev, asset]);
@@ -415,80 +424,66 @@ export default function CreateProgramPage() {
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-6">
-                                    {/* Video Input Options */}
+                                    {/* YouTube Video Embedding */}
                                     <div className="space-y-4">
+                                        <div className="flex items-center space-x-2 mb-4">
+                                            <Youtube className="h-5 w-5 text-red-600" />
+                                            <h4 className="font-medium text-gray-900">YouTube Video Embedding</h4>
+                                        </div>
+
                                         <div className="flex space-x-2">
-                                            <Button
-                                                type="button"
-                                                variant={videoInputType === 'upload' ? 'default' : 'outline'}
-                                                size="sm"
-                                                onClick={() => setVideoInputType('upload')}
-                                            >
-                                                <Upload className="h-4 w-4 mr-2" />
-                                                Upload
-                                            </Button>
-                                            <Button
-                                                type="button"
-                                                variant={videoInputType === 'youtube' ? 'default' : 'outline'}
-                                                size="sm"
-                                                onClick={() => setVideoInputType('youtube')}
-                                            >
+                                            <Input
+                                                value={videoInput}
+                                                onChange={(e) => setVideoInput(e.target.value)}
+                                                placeholder="Enter YouTube URL or iframe embed code"
+                                                className="flex-1"
+                                            />
+                                            <Button type="button" onClick={addVideoFromInput} variant="outline">
                                                 <Youtube className="h-4 w-4 mr-2" />
-                                                YouTube
-                                            </Button>
-                                            <Button
-                                                type="button"
-                                                variant={videoInputType === 'url' ? 'default' : 'outline'}
-                                                size="sm"
-                                                onClick={() => setVideoInputType('url')}
-                                            >
-                                                <Link className="h-4 w-4 mr-2" />
-                                                URL
+                                                Add Video
                                             </Button>
                                         </div>
 
-                                        {videoInputType === 'upload' && (
-                                            <div
-                                                {...getRootProps()}
-                                                className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isDragActive
-                                                    ? 'border-blue-500 bg-blue-50'
-                                                    : 'border-gray-300 hover:border-gray-400'
-                                                    }`}
-                                            >
-                                                <input {...getInputProps()} />
-                                                <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                                {isDragActive ? (
-                                                    <p className="text-blue-600">Drop the files here...</p>
-                                                ) : (
-                                                    <div>
-                                                        <p className="text-gray-600 mb-2">
-                                                            Drag & drop files here, or click to select files
-                                                        </p>
-                                                        <p className="text-sm text-gray-500">
-                                                            Supports: MP4, AVI, MOV, WEBM, PDF, DOC, DOCX, TXT
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
+                                        <div className="text-sm text-gray-500 bg-blue-50 p-3 rounded-lg">
+                                            <p className="font-medium text-blue-800 mb-1">Supported formats:</p>
+                                            <ul className="space-y-1 text-blue-700">
+                                                <li>• https://www.youtube.com/watch?v=VIDEO_ID</li>
+                                                <li>• https://youtu.be/VIDEO_ID</li>
+                                                <li>• https://www.youtube.com/embed/VIDEO_ID</li>
+                                                <li>• &lt;iframe&gt; embed code from YouTube</li>
+                                            </ul>
+                                        </div>
+                                    </div>
 
-                                        {(videoInputType === 'youtube' || videoInputType === 'url') && (
-                                            <div className="flex space-x-2">
-                                                <Input
-                                                    value={videoInput}
-                                                    onChange={(e) => setVideoInput(e.target.value)}
-                                                    placeholder={
-                                                        videoInputType === 'youtube'
-                                                            ? 'Enter YouTube URL (e.g., https://www.youtube.com/watch?v=...)'
-                                                            : 'Enter video URL'
-                                                    }
-                                                />
-                                                <Button type="button" onClick={addVideoFromInput} variant="outline">
-                                                    <Plus className="h-4 w-4 mr-2" />
-                                                    Add
-                                                </Button>
-                                            </div>
-                                        )}
+                                    {/* Document Upload */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center space-x-2 mb-4">
+                                            <File className="h-5 w-5 text-gray-600" />
+                                            <h4 className="font-medium text-gray-900">Document Upload</h4>
+                                        </div>
+
+                                        <div
+                                            {...getRootProps()}
+                                            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${isDragActive
+                                                ? 'border-blue-500 bg-blue-50'
+                                                : 'border-gray-300 hover:border-gray-400'
+                                                }`}
+                                        >
+                                            <input {...getInputProps()} />
+                                            <File className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                                            {isDragActive ? (
+                                                <p className="text-blue-600 font-medium">Drop documents here...</p>
+                                            ) : (
+                                                <div>
+                                                    <p className="text-gray-600 mb-1 font-medium">
+                                                        Drag & drop documents here, or click to select
+                                                    </p>
+                                                    <p className="text-sm text-gray-500">
+                                                        Supports: PDF, DOC, DOCX, TXT
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <div className="mt-4">
