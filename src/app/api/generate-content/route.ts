@@ -14,7 +14,9 @@ export async function POST(request: NextRequest) {
             assetId,
             contentType,
             language,
-            sourceContentLength: sourceContent?.length || 0
+            sourceContentLength: sourceContent?.length || 0,
+            sourceContentPreview: sourceContent?.substring(0, 100) + '...',
+            isYouTubeURL: sourceContent?.includes('youtube.com') || sourceContent?.includes('youtu.be')
         });
 
         if (!programId || !assetId || !contentType || !sourceContent) {

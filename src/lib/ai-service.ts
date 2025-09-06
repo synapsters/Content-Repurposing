@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { youtubeService } from './youtube-service';
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
 
@@ -44,6 +45,8 @@ export class AIContentGenerator {
       - Highlight key points and main concepts
       - Use bullet points for better readability
       - Maintain the original context and meaning
+      - If this is video content, focus on the actual video title, description, and topic
+      - Base the summary ONLY on the provided content information
       
       Please provide only the summary without any additional text.
     `;
@@ -195,12 +198,30 @@ export class AIContentGenerator {
         // Enhanced content processing for different source types
         let processedContent = sourceContent;
 
-        // If it's a YouTube URL, provide context about video content
+        // If it's a YouTube URL, fetch actual video information
         if (sourceContent.includes('youtube.com') || sourceContent.includes('youtu.be')) {
-            processedContent = `Video Content from YouTube URL: ${sourceContent}\n\nNote: This is educational video content. Please generate ${type} based on typical educational video content structure and common learning objectives for video-based learning materials.`;
+            console.log('🎥 YOUTUBE URL DETECTED! Fetching video information for:', sourceContent);
+            console.log('🔍 Source content type check:', typeof sourceContent, sourceContent.length);
+
+            try {
+                const videoInfo = await youtubeService.getVideoInfo(sourceContent);
+                if (videoInfo) {
+                    processedContent = youtubeService.formatVideoInfoForAI(videoInfo);
+                    console.log('✅ YouTube video info fetched successfully!');
+                    console.log('📝 Video title:', videoInfo.title);
+                    console.log('📄 Processed content preview:', processedContent.substring(0, 200) + '...');
+                } else {
+                    processedContent = `YouTube Video URL: ${sourceContent}\n\nNote: Could not fetch video details. Please generate ${type} based on general educational video content principles.`;
+                    console.warn('⚠️ Could not fetch YouTube video info for:', sourceContent);
+                }
+            } catch (error) {
+                console.error('❌ Error fetching YouTube video info:', error);
+                processedContent = `YouTube Video URL: ${sourceContent}\n\nNote: Error fetching video details. Please generate ${type} based on general educational video content principles.`;
+            }
         }
         // If it's another video URL
         else if (sourceContent.match(/\.(mp4|avi|mov|wmv|webm)$/i) || sourceContent.startsWith('http')) {
+            console.log('🔍 NOT a YouTube URL but is a video URL. Source content:', sourceContent.substring(0, 100) + '...');
             processedContent = `Video Content from URL: ${sourceContent}\n\nNote: This is video content. Please generate ${type} based on typical video-based educational content, focusing on visual and auditory learning elements.`;
         }
 
