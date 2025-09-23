@@ -53,21 +53,32 @@ export class AIContentGenerator {
     private model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     async generateSummary(content: string, language: string = 'en'): Promise<string> {
-        const prompt = `
-      **You are an expert technical content summarizer.**
+        const languageInstructions = {
+            'hi': 'सभी सामग्री हिंदी भाषा में होनी चाहिए। देवनागरी लिपि का उपयोग करें। तकनीकी शब्दों को हिंदी में अनुवादित करें।',
+            'en': 'All content should be in English.',
+            'fr': 'Tout le contenu doit être en français.',
+            'es': 'Todo el contenido debe estar en español.',
+            'ru': 'Весь контент должен быть на русском языке.'
+        };
 
-      **Your primary task is to summarize the technical content provided by the user in ${language} language.**:
-      
-      **Here are the strict rules for the summary:**
- 
-      * Include **only** the technical terms and concepts from the user's content.
-      * Omit all jargon, filler words, and long-winded explanations.
-      * Each technical term should be accompanied by a very short, one-line explanation. A second line is permissible only if the term is critically important and cannot be explained in a single line.
-      * The final summary must be between 120 and 150 words.
-      * The summary should be presented as a concise, structured list or series of bullet points for maximum clarity.
-      
-      ---
-      Content: ${content}
+        const langInstruction = languageInstructions[language as keyof typeof languageInstructions] || languageInstructions['en'];
+
+        const prompt = `
+**You are an expert technical content summarizer.**
+
+**LANGUAGE REQUIREMENT: ${langInstruction}**
+
+**Your primary task is to summarize the technical content in ${language} language.**
+
+**Strict rules for the summary:**
+* Include **only** the technical terms and concepts from the user's content
+* Omit all jargon, filler words, and long-winded explanations
+* Each technical term should be accompanied by a very short, one-line explanation
+* The final summary must be between 120 and 150 words
+* The summary should be presented as a concise, structured list or series of bullet points
+* Write everything in ${language} language
+
+Content: ${content}
     `;
 
         const result = await this.model.generateContent(prompt);
@@ -75,57 +86,55 @@ export class AIContentGenerator {
     }
 
     async generateQuiz(content: string, language: string = 'en', numQuestions: number = 5): Promise<QuizQuestion[]> {
+        const languageInstructions = {
+            'hi': 'सभी प्रश्न, विकल्प और स्पष्टीकरण हिंदी भाषा में होने चाहिए। देवनागरी लिपि का उपयोग करें।',
+            'en': 'All questions, options, and explanations should be in English.',
+            'fr': 'Toutes les questions, options et explications doivent être en français.',
+            'es': 'Todas las preguntas, opciones y explicaciones deben estar en español.',
+            'ru': 'Все вопросы, варианты ответов и объяснения должны быть на русском языке.'
+        };
+
+        const langInstruction = languageInstructions[language as keyof typeof languageInstructions] || languageInstructions['en'];
+
         const prompt = `
-      You are an expert quiz master. Your goal is to generate ${numQuestions} single-choice questions from the technical content provided by the user in ${language} language. These questions should cover the user-provided content comprehensively.
- 
-        ---
-        
-        ### **Question Generation Requirements**
-        
-        1.  **Question Count:** Generate a total of 10 to 15 single-choice questions. Each question must have exactly four options (A, B, C, D), with only one correct answer.
-        2.  **Difficulty Distribution:**
-            * **Easy/Beginner:** Approximately 30% of the questions should be easy level. These questions should test fundamental knowledge and straightforward concepts.
-            * **Medium:** Approximately 50% of the questions should be medium level. These questions should require a deeper understanding and application of the concepts.
-            * **Advanced:** Approximately 20% of the questions should be advanced level. These questions should be more complex, possibly requiring critical thinking, problem-solving, or the integration of multiple concepts.
-        3.  **Question Variety:** Ensure a mix of question types to avoid monotony:
-            * **Straightforward Questions:** These directly test knowledge recall.
-            * **Creative Questions:** These might use analogies or ask the user to identify a concept based on a non-obvious description.
-            * **Case-Based Questions:** These present a short scenario or problem and ask the user to apply their knowledge to find the best solution.
-        4.  **Content Coverage:** The questions must be generated exclusively from the technical content provided by the user. Do not introduce new information or concepts.
-        5.  **Output Format:** Present the questions clearly, with the correct answer specified for each.
-        
-        ---
-        
-        ### **Example Output Structure**
-        
-        To maintain consistency and clarity, please use the following format for each question:
-        
-        CRITICAL: Return ONLY a valid JSON array. No markdown, no explanations, no other text.
-        
-        Use this EXACT structure:
-        [
-            {
-                "question": "Question text",
-                "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
-                "correctAnswer": 0,
-                "explanation": "Explanation text"
-            }
-        ]
-        
-        JSON FORMATTING RULES:
-        - Use ONLY double quotes, never single quotes
-        - Escape quotes inside strings with backslash (\")
-        - correctAnswer must be a number (0-3)
-        - No trailing commas
-        - No comments in JSON
-        
-        **Explanation: ** A concise explanation for the correct answer.
+You are an expert quiz master. Generate ${numQuestions} single-choice questions from the provided content.
 
-        ---
+LANGUAGE REQUIREMENT: ${langInstruction}
 
-        Content: ${content}
+IMPORTANT: Generate content in ${language} language. If the language is Hindi (hi), use proper Devanagari script.
 
-    `;
+### Requirements:
+1. Generate exactly ${numQuestions} questions with 4 options each
+2. Each question has one correct answer (index 0-3)
+3. Cover the provided content comprehensively
+4. Mix difficulty levels: 30% easy, 50% medium, 20% advanced
+5. Include clear explanations for correct answers
+
+CRITICAL OUTPUT FORMAT:
+- Return ONLY valid JSON
+- No markdown code blocks
+- No additional text
+- No comments
+
+EXACT JSON STRUCTURE:
+[
+  {
+    "question": "Question text in ${language}",
+    "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+    "correctAnswer": 0,
+    "explanation": "Explanation in ${language}"
+  }
+]
+
+JSON RULES:
+- Use double quotes only
+- Escape internal quotes with backslash
+- correctAnswer is a number (0-3)
+- No trailing commas
+
+Content to create quiz from:
+${content}
+`;
 
         const result = await this.model.generateContent(prompt);
         const response = result.response.text();
@@ -135,55 +144,137 @@ export class AIContentGenerator {
             let cleanedResponse = response.trim();
 
             // Remove markdown code blocks if present
-            cleanedResponse = cleanedResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+            cleanedResponse = cleanedResponse.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
 
-            // Find JSON array in the response
-            const jsonMatch = cleanedResponse.match(/\[[\s\S]*\]/);
+            // Remove any leading/trailing text that might interfere
+            cleanedResponse = cleanedResponse.replace(/^[^[{]*/, '').replace(/[^}\]]*$/, '');
+
+            // Find JSON array in the response (more flexible matching)
+            const jsonMatch = cleanedResponse.match(/\[[\s\S]*\]/) || cleanedResponse.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
                 let jsonStr = jsonMatch[0];
 
-                // Fix common JSON issues
-                // Replace single quotes with double quotes (but not inside strings)
-                jsonStr = jsonStr.replace(/'/g, '"');
+                // Step 1: Basic cleaning
+                jsonStr = jsonStr.trim();
 
-                // Fix escaped quotes that might have been double-escaped
-                jsonStr = jsonStr.replace(/\\"/g, '\\"');
-
-                // Try to parse the cleaned JSON
+                // Step 2: Try to parse as-is first
                 try {
-                    return JSON.parse(jsonStr);
-                } catch (parseError) {
-                    console.error('JSON parse error, trying fallback:', parseError);
-                    console.error('Problematic JSON:', jsonStr.substring(0, 200) + '...');
+                    const parsed = JSON.parse(jsonStr);
+                    // If it's an object but we need an array, wrap it
+                    return Array.isArray(parsed) ? parsed : [parsed];
+                } catch (initialParseError) {
+                    console.log('Initial parse failed, attempting fixes...');
 
-                    // Fallback: try to fix more complex quote issues
+                    // Step 3: Apply quote fixes
                     jsonStr = this.fixJsonQuotes(jsonStr);
-                    return JSON.parse(jsonStr);
+
+                    // Step 4: Try parsing again
+                    try {
+                        const parsed = JSON.parse(jsonStr);
+                        return Array.isArray(parsed) ? parsed : [parsed];
+                    } catch (secondParseError) {
+                        console.error('JSON parse error after fixes:', secondParseError);
+                        console.error('Problematic JSON:', jsonStr.substring(0, 300) + '...');
+
+                        // Step 5: Last resort - try manual extraction
+                        return this.extractQuestionsManually(jsonStr, language);
+                    }
                 }
             }
-            throw new Error('No valid JSON array found in response');
+            throw new Error('No valid JSON found in response');
         } catch (error) {
             console.error('Error parsing quiz JSON:', error);
-            console.error('Raw response:', response.substring(0, 300) + '...');
+            console.error('Raw response:', response.substring(0, 500) + '...');
 
             // Return a fallback quiz if parsing fails
             return this.getFallbackQuiz(language);
         }
     }
 
+    private extractQuestionsManually(jsonStr: string, language: string): QuizQuestion[] {
+        try {
+            // Last resort: try to extract questions manually using regex
+            const questionPattern = /"question"\s*:\s*"([^"]+)"/g;
+            const optionsPattern = /"options"\s*:\s*\[([^\]]+)\]/g;
+            const correctAnswerPattern = /"correctAnswer"\s*:\s*(\d+)/g;
+            const explanationPattern = /"explanation"\s*:\s*"([^"]+)"/g;
+
+            const questions: string[] = [];
+            const options: string[][] = [];
+            const correctAnswers: number[] = [];
+            const explanations: string[] = [];
+
+            let match;
+
+            // Extract questions
+            while ((match = questionPattern.exec(jsonStr)) !== null) {
+                questions.push(match[1]);
+            }
+
+            // Extract options
+            while ((match = optionsPattern.exec(jsonStr)) !== null) {
+                const optionStr = match[1];
+                const optionArray = optionStr.split(',').map(opt =>
+                    opt.trim().replace(/^["']|["']$/g, '')
+                );
+                options.push(optionArray);
+            }
+
+            // Extract correct answers
+            while ((match = correctAnswerPattern.exec(jsonStr)) !== null) {
+                correctAnswers.push(parseInt(match[1]));
+            }
+
+            // Extract explanations
+            while ((match = explanationPattern.exec(jsonStr)) !== null) {
+                explanations.push(match[1]);
+            }
+
+            // Build questions array
+            const extractedQuestions: QuizQuestion[] = [];
+            const maxLength = Math.min(questions.length, options.length, correctAnswers.length, explanations.length);
+
+            for (let i = 0; i < maxLength; i++) {
+                extractedQuestions.push({
+                    question: questions[i],
+                    options: options[i],
+                    correctAnswer: correctAnswers[i],
+                    explanation: explanations[i]
+                });
+            }
+
+            return extractedQuestions.length > 0 ? extractedQuestions : this.getFallbackQuiz(language);
+        } catch (error) {
+            console.error('Manual extraction failed:', error);
+            return this.getFallbackQuiz(language);
+        }
+    }
+
     private fixJsonQuotes(jsonStr: string): string {
         // More sophisticated quote fixing
-        // This is a simple approach - in production, you might want a more robust JSON fixer
         try {
-            // Replace problematic patterns
-            jsonStr = jsonStr
-                .replace(/([{,]\s*)(\w+):/g, '$1"$2":') // Fix unquoted keys
-                .replace(/:\s*'([^']*?)'/g, ': "$1"') // Fix single-quoted values
-                .replace(/:\s*"([^"]*?)"/g, (match, content) => {
-                    // Fix escaped quotes in content
-                    const fixedContent = content.replace(/"/g, '\\"');
-                    return `: "${fixedContent}"`;
-                });
+            // Step 1: Handle unquoted keys
+            jsonStr = jsonStr.replace(/([{,]\s*)(\w+):/g, '$1"$2":');
+
+            // Step 2: Replace single quotes with double quotes, but avoid breaking existing escaped quotes
+            jsonStr = jsonStr.replace(/:\s*'([^']*)'/g, ': "$1"');
+
+            // Step 3: Fix escaped quotes that might be causing issues
+            // Find strings and fix internal quotes
+            jsonStr = jsonStr.replace(/"([^"\\]*(\\.[^"\\]*)*)"/g, (match, content) => {
+                // If the content contains unescaped quotes, escape them
+                const fixedContent = content.replace(/(?<!\\)"/g, '\\"');
+                return `"${fixedContent}"`;
+            });
+
+            // Step 4: Remove any potential trailing commas
+            jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
+
+            // Step 5: Fix common text artifacts that might break JSON
+            jsonStr = jsonStr.replace(/\.\.\./g, '...');  // Fix ellipsis
+            jsonStr = jsonStr.replace(/'/g, "'");  // Fix smart quotes
+            jsonStr = jsonStr.replace(/"/g, '"');  // Fix smart quotes
+            jsonStr = jsonStr.replace(/"/g, '"');  // Fix smart quotes
 
             return jsonStr;
         } catch (error) {
@@ -217,6 +308,22 @@ export class AIContentGenerator {
                     correctAnswer: 0,
                     explanation: "Esta es una pregunta de respaldo generada cuando el servicio de IA encuentra un error."
                 }
+            ],
+            hi: [
+                {
+                    question: "इस सामग्री का मुख्य विषय क्या है?",
+                    options: ["प्रोग्रामिंग", "तकनीक", "सामान्य ज्ञान", "अन्य"],
+                    correctAnswer: 0,
+                    explanation: "यह एक आपातकालीन प्रश्न है जो AI सेवा में त्रुटि होने पर उत्पन्न होता है।"
+                }
+            ],
+            ru: [
+                {
+                    question: "Какова основная тема этого контента?",
+                    options: ["Программирование", "Технология", "Общие знания", "Другое"],
+                    correctAnswer: 0,
+                    explanation: "Это резервный вопрос, генерируемый при возникновении ошибки в службе ИИ."
+                }
             ]
         };
 
@@ -245,6 +352,20 @@ export class AIContentGenerator {
                     back: "Esta es una tarjeta de estudio de respaldo generada cuando el servicio de IA encuentra un error.",
                     category: "General"
                 }
+            ],
+            hi: [
+                {
+                    front: "इस सामग्री का मुख्य विषय क्या है?",
+                    back: "यह एक आपातकालीन फ्लैशकार्ड है जो AI सेवा में त्रुटि होने पर उत्पन्न होता है।",
+                    category: "सामान्य"
+                }
+            ],
+            ru: [
+                {
+                    front: "Какова основная тема этого контента?",
+                    back: "Это резервная флеш-карта, генерируемая при возникновении ошибки в службе ИИ.",
+                    category: "Общее"
+                }
             ]
         };
 
@@ -252,8 +373,22 @@ export class AIContentGenerator {
     }
 
     async generateCaseStudy(content: string, language: string = 'en'): Promise<CaseStudy> {
+        const languageInstructions = {
+            'hi': 'सभी केस स्टडी हिंदी भाषा में होनी चाहिए। देवनागरी लिपि का उपयोग करें।',
+            'en': 'All case study should be in English.',
+            'fr': 'Toute l\'étude de cas doit être en français.',
+            'es': 'Todo el estudio de caso debe estar en español.',
+            'ru': 'Все кейс-стади должны быть на русском языке.'
+        };
+
+        const langInstruction = languageInstructions[language as keyof typeof languageInstructions] || languageInstructions['en'];
+
         const prompt = `
-        You are an expert case study creator. Your task is to generate a comprehensive and practical case study in ${language} language tailored for a specific technology and user-provided content. The case study should be highly relevant and focus on the practical application of the provided material.
+You are an expert case study creator.
+
+**LANGUAGE REQUIREMENT: ${langInstruction}**
+
+**Your task is to generate a comprehensive and practical case study in ${language} language tailored for a specific technology and user-provided content. The case study should be highly relevant and focus on the practical application of the provided material.
  
         Your output must include the following sections:
         
@@ -294,13 +429,13 @@ export class AIContentGenerator {
         
         ---
         
-        Strictly return the response as JSON with this structure:
+        Strictly return the response as JSON with this structure (all content in ${language}):
       {
-        "title": "Case Study Title",
-        "scenario": "Detailed scenario description",
-        "challenges": ["Challenge 1", "Challenge 2", "Challenge 3"],
-        "questions": ["Question 1", "Question 2", "Question 3"],
-        "learningObjectives": ["Objective 1", "Objective 2", "Objective 3"]
+        "title": "Case Study Title in ${language}",
+        "scenario": "Detailed scenario description in ${language}",
+        "challenges": ["Challenge 1 in ${language}", "Challenge 2 in ${language}", "Challenge 3 in ${language}"],
+        "questions": ["Question 1 in ${language}", "Question 2 in ${language}", "Question 3 in ${language}"],
+        "learningObjectives": ["Objective 1 in ${language}", "Objective 2 in ${language}", "Objective 3 in ${language}"]
       }
 
         ---
@@ -325,27 +460,39 @@ export class AIContentGenerator {
     }
 
     async generateShortLecture(content: string, language: string = 'en'): Promise<string> {
-        const prompt = `
-        You are a technical content summarization expert. Your task is to analyze and summarize technical learning materials provided by the user in ${language} language.
- 
-        Your response must meet the following criteria:
-        
-        * **Structure**: Present the summary in a well-organized, point-by-point format. Use headings and bullet points to ensure clarity and readability.
-        * **Accuracy and Completeness**:
-            * Thoroughly capture all key technical concepts, topics, and definitions from the original content. Do not omit any technical term.
-            * Do not add any new information, examples, or interpretations. Your summary must be derived *exclusively* from the user's provided text.
-        * **Clarity**:
-            * Rewrite complex technical jargon into simple, easy-to-understand language.
-            * Stictly omit all jargons and storylines from the content.
-            * Maintain a clear, concise, and professional tone.
-        * **Summary Length**:
-            * Response should be strictly at-most one-thrid the size of the original data.
-        * **Format**: The output should be a clean, direct summary. Do not include any conversational filler, introductory phrases, or concluding remarks. Just provide the summary.
-        
-        ---
+        const languageInstructions = {
+            'hi': 'सभी सामग्री हिंदी भाषा में होनी चाहिए। देवनागरी लिपि का उपयोग करें। तकनीकी शब्दों को हिंदी में समझाएं।',
+            'en': 'All content should be in English.',
+            'fr': 'Tout le contenu doit être en français.',
+            'es': 'Todo el contenido debe estar en español.',
+            'ru': 'Весь контент должен быть на русском языке.'
+        };
 
-        Content: ${content}
-        
+        const langInstruction = languageInstructions[language as keyof typeof languageInstructions] || languageInstructions['en'];
+
+        const prompt = `
+You are a technical content summarization expert.
+
+**LANGUAGE REQUIREMENT: ${langInstruction}**
+
+**Your task is to analyze and summarize technical learning materials in ${language} language.**
+
+Your response must meet the following criteria:
+
+* **Structure**: Present the summary in a well-organized, point-by-point format. Use headings and bullet points to ensure clarity and readability.
+* **Accuracy and Completeness**:
+    * Thoroughly capture all key technical concepts, topics, and definitions from the original content. Do not omit any technical term.
+    * Do not add any new information, examples, or interpretations. Your summary must be derived *exclusively* from the user's provided text.
+* **Clarity**:
+    * Rewrite complex technical jargon into simple, easy-to-understand language.
+    * Strictly omit all jargons and storylines from the content.
+    * Maintain a clear, concise, and professional tone.
+* **Summary Length**:
+    * Response should be strictly at-most one-third the size of the original data.
+* **Format**: The output should be a clean, direct summary. Do not include any conversational filler, introductory phrases, or concluding remarks. Just provide the summary.
+* **Language**: Write everything in ${language} language.
+
+Content: ${content}
     `;
 
         const result = await this.model.generateContent(prompt);
@@ -353,34 +500,46 @@ export class AIContentGenerator {
     }
 
     async generateFlashCards(content: string, language: string = 'en', numCards: number = 10): Promise<FlashCard[]> {
+        const languageInstructions = {
+            'hi': 'सभी फ्लैशकार्ड हिंदी भाषा में होने चाहिए। देवनागरी लिपि का उपयोग करें।',
+            'en': 'All flashcards should be in English.',
+            'fr': 'Toutes les cartes mémoire doivent être en français.',
+            'es': 'Todas las tarjetas de estudio deben estar en español.',
+            'ru': 'Все флеш-карты должны быть на русском языке.'
+        };
+
+        const langInstruction = languageInstructions[language as keyof typeof languageInstructions] || languageInstructions['en'];
+
         const prompt = `
-      Create ${numCards} flashcards based on the following content in ${language}:
-      
-      Content: ${content}
-      
-      Requirements:
-      - Each card should have a clear question/term on the front
-      - Provide concise, accurate answers on the back
-      - Cover key concepts, definitions, and important facts
-      - Categorize cards by topic when possible
-      - Make them useful for quick review and memorization
-      
-      CRITICAL: Return ONLY a valid JSON array. No markdown, no explanations, no other text.
-      
-      Use this EXACT structure:
-      [
-        {
-          "front": "Question or term",
-          "back": "Answer or definition",
-          "category": "Topic category"
-        }
-      ]
-      
-      JSON FORMATTING RULES:
-      - Use ONLY double quotes, never single quotes
-      - Escape quotes inside strings with backslash (\")
-      - No trailing commas
-      - No comments in JSON
+Create ${numCards} flashcards based on the following content.
+
+LANGUAGE REQUIREMENT: ${langInstruction}
+
+Requirements:
+- Each card should have a clear question/term on the front in ${language}
+- Provide concise, accurate answers on the back in ${language}
+- Cover key concepts, definitions, and important facts
+- Categorize cards by topic when possible in ${language}
+- Make them useful for quick review and memorization
+
+CRITICAL: Return ONLY a valid JSON array. No markdown, no explanations, no other text.
+
+EXACT JSON STRUCTURE:
+[
+  {
+    "front": "Question or term in ${language}",
+    "back": "Answer or definition in ${language}",
+    "category": "Topic category in ${language}"
+  }
+]
+
+JSON FORMATTING RULES:
+- Use ONLY double quotes, never single quotes
+- Escape quotes inside strings with backslash (\")
+- No trailing commas
+- No comments in JSON
+
+Content: ${content}
     `;
 
         const result = await this.model.generateContent(prompt);
@@ -391,33 +550,47 @@ export class AIContentGenerator {
             let cleanedResponse = response.trim();
 
             // Remove markdown code blocks if present
-            cleanedResponse = cleanedResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+            cleanedResponse = cleanedResponse.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
 
-            // Find JSON array in the response
-            const jsonMatch = cleanedResponse.match(/\[[\s\S]*\]/);
+            // Remove any leading/trailing text that might interfere
+            cleanedResponse = cleanedResponse.replace(/^[^[{]*/, '').replace(/[^}\]]*$/, '');
+
+            // Find JSON array in the response (more flexible matching)
+            const jsonMatch = cleanedResponse.match(/\[[\s\S]*\]/) || cleanedResponse.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
                 let jsonStr = jsonMatch[0];
 
-                // Fix common JSON issues
-                jsonStr = jsonStr.replace(/'/g, '"');
-                jsonStr = jsonStr.replace(/\\"/g, '\\"');
+                // Step 1: Basic cleaning
+                jsonStr = jsonStr.trim();
 
-                // Try to parse the cleaned JSON
+                // Step 2: Try to parse as-is first
                 try {
-                    return JSON.parse(jsonStr);
-                } catch (parseError) {
-                    console.error('JSON parse error, trying fallback:', parseError);
-                    console.error('Problematic JSON:', jsonStr.substring(0, 200) + '...');
+                    const parsed = JSON.parse(jsonStr);
+                    // If it's an object but we need an array, wrap it
+                    return Array.isArray(parsed) ? parsed : [parsed];
+                } catch (initialParseError) {
+                    console.log('Initial flashcard parse failed, attempting fixes...');
 
-                    // Fallback: try to fix more complex quote issues
+                    // Step 3: Apply quote fixes
                     jsonStr = this.fixJsonQuotes(jsonStr);
-                    return JSON.parse(jsonStr);
+
+                    // Step 4: Try parsing again
+                    try {
+                        const parsed = JSON.parse(jsonStr);
+                        return Array.isArray(parsed) ? parsed : [parsed];
+                    } catch (secondParseError) {
+                        console.error('Flashcard JSON parse error after fixes:', secondParseError);
+                        console.error('Problematic JSON:', jsonStr.substring(0, 300) + '...');
+
+                        // Return fallback if all else fails
+                        return this.getFallbackFlashCards(language);
+                    }
                 }
             }
-            throw new Error('No valid JSON array found in response');
+            throw new Error('No valid JSON found in flashcard response');
         } catch (error) {
             console.error('Error parsing flashcards JSON:', error);
-            console.error('Raw response:', response.substring(0, 300) + '...');
+            console.error('Raw response:', response.substring(0, 500) + '...');
 
             // Return a fallback flashcard set if parsing fails
             return this.getFallbackFlashCards(language);
@@ -425,28 +598,43 @@ export class AIContentGenerator {
     }
 
     async generateAudioTrack(content: string, language: string = 'en'): Promise<string> {
+        const languageInstructions = {
+            'hi': 'सभी ऑडियो स्क्रिप्ट हिंदी भाषा में होनी चाहिए। देवनागरी लिपि का उपयोग करें।',
+            'en': 'All audio script should be in English.',
+            'fr': 'Tout le script audio doit être en français.',
+            'es': 'Todo el guión de audio debe estar en español.',
+            'ru': 'Весь аудио-скрипт должен быть на русском языке.'
+        };
+
+        const langInstruction = languageInstructions[language as keyof typeof languageInstructions] || languageInstructions['en'];
+
         const prompt = `
-      Create an engaging audio narration script for the following content in ${language}:
-      
-      Content: ${content}
-      
-      Requirements:
-      - Write a natural, conversational narration script suitable for text-to-speech
-      - DO NOT include markdown headers (##, ###) or formatting symbols
-      - Include appropriate pauses marked with [PAUSE]
-      - Add emphasis markers like [EMPHASIS] for important points
-      - Structure it with clear introduction, main content, and conclusion
-      - Keep sentences at moderate length for clear pronunciation
-      - Add breathing spaces and natural flow
-      - Include tone guidance like [FRIENDLY TONE] or [SERIOUS TONE] where appropriate
-      - Make it engaging and educational
-      - Duration should be approximately 3-5 minutes when narrated
-      - If this is video content, create narration that complements the visual elements
-      - Use plain text format without any markdown or special formatting
-      - Avoid timestamps like (0:00-0:15) in the main narration text
-      
-      Format the response as a clean, plain text narration script with only timing and tone markers in brackets.
-      Do not use markdown headers, bold text, or other formatting symbols.
+Create an engaging audio narration script for the following content.
+
+**LANGUAGE REQUIREMENT: ${langInstruction}**
+
+**Create the script in ${language} language.**
+
+Requirements:
+- Write a natural, conversational narration script suitable for text-to-speech in ${language}
+- DO NOT include markdown headers (##, ###) or formatting symbols
+- Include appropriate pauses marked with [PAUSE]
+- Add emphasis markers like [EMPHASIS] for important points
+- Structure it with clear introduction, main content, and conclusion
+- Keep sentences at moderate length for clear pronunciation
+- Add breathing spaces and natural flow
+- Include tone guidance like [FRIENDLY TONE] or [SERIOUS TONE] where appropriate
+- Make it engaging and educational
+- Duration should be approximately 3-5 minutes when narrated
+- If this is video content, create narration that complements the visual elements
+- Use plain text format without any markdown or special formatting
+- Avoid timestamps like (0:00-0:15) in the main narration text
+- Write everything in ${language} language
+
+Content: ${content}
+
+Format the response as a clean, plain text narration script with only timing and tone markers in brackets.
+Do not use markdown headers, bold text, or other formatting symbols.
       `;
 
         const result = await this.model.generateContent(prompt);
@@ -454,40 +642,55 @@ export class AIContentGenerator {
     }
 
     async generateVideoScript(content: string, language: string = 'en'): Promise<VideoScript> {
+        const languageInstructions = {
+            'hi': 'सभी वीडियो स्क्रिप्ट हिंदी भाषा में होनी चाहिए। देवनागरी लिपि का उपयोग करें।',
+            'en': 'All video script should be in English.',
+            'fr': 'Tout le script vidéo doit être en français.',
+            'es': 'Todo el guión de video debe estar en español.',
+            'ru': 'Весь видео-скрипт должен быть на русском языке.'
+        };
+
+        const langInstruction = languageInstructions[language as keyof typeof languageInstructions] || languageInstructions['en'];
+
         const prompt = `
-      Create a comprehensive video script for the following content in ${language}:
-      
-      Content: ${content}
-      
-      Requirements:
-      - Create an engaging 2-3 minute educational video script
-      - Structure it with clear scenes and visual descriptions
-      - Include detailed voiceover text for each scene
-      - Provide visual descriptions suitable for video production
-      - Add on-screen text suggestions where appropriate
-      - Include smooth transitions between scenes
-      - Make it suitable for educational/explainer video format
-      - Focus on visual storytelling and engagement
-      - Include a compelling call-to-action at the end
-      
-      Return the response as a JSON object with this exact structure:
-      {
-        "title": "Video title",
-        "description": "Brief video description",
-        "duration": "2-3 minutes",
-        "scenes": [
-          {
-            "sceneNumber": 1,
-            "duration": "15-20 seconds",
-            "visualDescription": "Detailed description of what viewers see",
-            "voiceoverText": "Exact text to be spoken",
-            "onScreenText": "Text overlay on screen (optional)",
-            "transitions": "How this scene transitions to next"
-          }
-        ],
-        "voiceover": "Complete voiceover script as one text",
-        "callToAction": "Final call-to-action message"
-      }
+Create a comprehensive video script for the following content.
+
+**LANGUAGE REQUIREMENT: ${langInstruction}**
+
+**Create the script in ${language} language.**
+
+Requirements:
+- Create an engaging 2-3 minute educational video script in ${language}
+- Structure it with clear scenes and visual descriptions
+- Include detailed voiceover text for each scene in ${language}
+- Provide visual descriptions suitable for video production
+- Add on-screen text suggestions where appropriate in ${language}
+- Include smooth transitions between scenes
+- Make it suitable for educational/explainer video format
+- Focus on visual storytelling and engagement
+- Include a compelling call-to-action at the end in ${language}
+- Write everything in ${language} language
+
+Content: ${content}
+
+Return the response as a JSON object with this exact structure:
+{
+  "title": "Video title in ${language}",
+  "description": "Brief video description in ${language}",
+  "duration": "2-3 minutes",
+  "scenes": [
+    {
+      "sceneNumber": 1,
+      "duration": "15-20 seconds",
+      "visualDescription": "Detailed description of what viewers see in ${language}",
+      "voiceoverText": "Exact text to be spoken in ${language}",
+      "onScreenText": "Text overlay on screen in ${language} (optional)",
+      "transitions": "How this scene transitions to next in ${language}"
+    }
+  ],
+  "voiceover": "Complete voiceover script as one text in ${language}",
+  "callToAction": "Final call-to-action message in ${language}"
+}
       `;
 
         const result = await this.model.generateContent(prompt);
